@@ -20,9 +20,13 @@ const generateWindHeatmapData = (
   vesselsData: Record<string, VesselDataPoint>,
 ): GeoJSON => {
   const features: Feature<Point>[] = [];
+  let skippedVessels = 0;
 
   Object.entries(vesselsData).forEach(([vesselId, data]) => {
-    if (!data.coords || !data.tws) return;
+    if (!data.coords || data.tws === undefined || data.tws === null) {
+      skippedVessels++;
+      return;
+    }
 
     features.push({
       type: "Feature",
@@ -36,6 +40,10 @@ const generateWindHeatmapData = (
       },
     });
   });
+
+  if (skippedVessels > 0) {
+    console.log(`Wind heatmap: Skipped ${skippedVessels} vessels with no wind data`);
+  }
 
   return {
     type: "FeatureCollection",
