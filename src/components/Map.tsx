@@ -117,7 +117,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         const el = document.createElement("div");
         el.className = "vessel-marker";
         el.style.width = "24px";
-        el.style.height = "24px";
+        el.style.height = "35px";
 
         // Generate initial boat icon
         const root = createRoot(el);
@@ -196,7 +196,10 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
             color={generateColorFromId(vesselId)} 
             width={24} 
             height={10} 
-            rotation={rotation} 
+            rotation={rotation}
+            windDirection={currentPoint.twa}
+            windSpeed={currentPoint.tws}
+            showWindArrow={currentPoint.twa !== undefined && currentPoint.tws !== undefined && currentPoint.tws > 0}
           />
         );
       }

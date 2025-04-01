@@ -266,6 +266,9 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             width={24}
             height={10}
             rotation={rotation}
+            windDirection={data.twa}
+            windSpeed={data.tws}
+            showWindArrow={data.twa !== undefined && data.tws !== undefined && data.tws > 0}
           />,
         );
 
@@ -304,7 +307,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         const el = document.createElement("div");
         el.className = "vessel-marker";
         el.style.width = "24px";
-        el.style.height = "24px";
+        el.style.height = "35px";
 
         // Generate initial boat icon
         const rotation = data.hdg || data.cog || 0;
@@ -317,6 +320,9 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             width={24}
             height={10}
             rotation={rotation}
+            windDirection={data.twa}
+            windSpeed={data.tws}
+            showWindArrow={data.twa !== undefined && data.tws !== undefined && data.tws > 0}
           />,
         );
 
