@@ -37,8 +37,12 @@ export const LivePage = () => {
             // Handle both array format and direct object format
             if (Array.isArray(positionData) && positionData.length > 0) {
               // If array format, take the latest position
-              currentPositions[vesselId] = positionData[positionData.length - 1];
-            } else if (typeof positionData === 'object' && positionData !== null) {
+              currentPositions[vesselId] =
+                positionData[positionData.length - 1];
+            } else if (
+              typeof positionData === "object" &&
+              positionData !== null
+            ) {
               // If direct object format, use it directly
               currentPositions[vesselId] = positionData as VesselDataPoint;
             }
@@ -77,7 +81,6 @@ export const LivePage = () => {
   return (
     <div className="map-view live-view">
       <div className="live-status">
-        <h2 className="view-title">Live Vessel Positions</h2>
         {lastUpdated && (
           <div className="last-updated">
             Last updated: {formattedTime}
