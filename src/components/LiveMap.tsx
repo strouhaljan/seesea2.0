@@ -42,7 +42,9 @@ const generateWindHeatmapData = (
   });
 
   if (skippedVessels > 0) {
-    console.log(`Wind heatmap: Skipped ${skippedVessels} vessels with no wind data`);
+    console.log(
+      `Wind heatmap: Skipped ${skippedVessels} vessels with no wind data`,
+    );
   }
 
   return {
@@ -76,14 +78,14 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
     return () => {
       // Clean up all React roots
-      Object.values(rootsRef.current).forEach(root => {
+      Object.values(rootsRef.current).forEach((root) => {
         try {
           root.unmount();
         } catch (e) {
           console.error("Error unmounting React root:", e);
         }
       });
-      
+
       // Remove the map instance (which will clean up all layers and sources)
       map.current?.remove();
     };
@@ -92,7 +94,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   // Add wind heatmap layer when map loads (only once)
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
-    
+
     // Only add the source and layer if they don't exist yet
     if (!map.current.getSource("wind-data")) {
       // Create empty data source for wind heatmap
@@ -176,7 +178,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
       map.current.setLayoutProperty(
         "wind-heatmap",
         "visibility",
-        showWindHeatmap ? "visible" : "none"
+        showWindHeatmap ? "visible" : "none",
       );
     }
 
@@ -253,7 +255,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         marker.setLngLat(data.coords as [number, number]);
 
         // Update rotation
-        const rotation = data.hdg || data.cog || 0;
+        const rotation = data.hdg || undefined;
         const el = marker.getElement();
 
         if (!rootsRef.current[vesselId]) {
@@ -267,8 +269,11 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             height={10}
             rotation={rotation}
             windDirection={data.twa}
+            heading={data.hdg}
             windSpeed={data.tws}
-            showWindArrow={data.twa !== undefined && data.tws !== undefined && data.tws > 0}
+            showWindArrow={
+              data.twa !== undefined && data.tws !== undefined && data.tws > 0
+            }
           />,
         );
 
@@ -297,7 +302,12 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             <tr>
               <td>Wind Speed:</td>
               <td>${data.tws.toFixed(1)} knots</td>
-            </tr>`
+            </tr>
+             <tr>
+              <td>Heading:</td>
+              <td>${data.hdg.toFixed(1)} deg</td>
+            </tr>
+            `
                 : ""
             }
           </table>
@@ -320,9 +330,12 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             width={24}
             height={10}
             rotation={rotation}
+            heading={data.hdg}
             windDirection={data.twa}
             windSpeed={data.tws}
-            showWindArrow={data.twa !== undefined && data.tws !== undefined && data.tws > 0}
+            showWindArrow={
+              data.twa !== undefined && data.tws !== undefined && data.tws > 0
+            }
           />,
         );
 
@@ -357,6 +370,10 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             <tr>
               <td>Wind Speed:</td>
               <td>${data.tws.toFixed(1)} knots</td>
+            </tr>
+             <tr>
+              <td>Heading:</td>
+              <td>${data.hdg.toFixed(1)} deg</td>
             </tr>`
                 : ""
             }

@@ -1,5 +1,21 @@
 import React from "react";
 
+const getWindDirection = (heading: number, windDirection: number) => {
+  if (heading === undefined || windDirection === undefined) {
+    return undefined;
+  }
+
+  // Calculate wind direction based on heading and wind direction
+  let windHeading = heading + windDirection;
+
+  windHeading = windHeading < 0 ? windHeading + 360 : windHeading;
+
+  // Normalize wind heading to range [0, 360)
+  const normalizedWindHeading = windHeading % 360;
+
+  return normalizedWindHeading;
+};
+
 interface BoatIconProps {
   color?: string;
   width?: number;
@@ -10,6 +26,7 @@ interface BoatIconProps {
   windSpeed?: number;
   showWindArrow?: boolean;
   windArrowColor?: string;
+  heading?: number;
 }
 
 const BoatIcon: React.FC<BoatIconProps> = ({
@@ -21,7 +38,12 @@ const BoatIcon: React.FC<BoatIconProps> = ({
   windDirection,
   windSpeed,
   showWindArrow = false,
+  windArrowColor = "#000000",
+  heading,
 }) => {
+  if (!rotation) {
+    return null;
+  }
   // Calculate total height to accommodate the wind arrow and speed label
   const totalHeight =
     showWindArrow && windDirection !== undefined ? height * 2.5 : height;
@@ -29,6 +51,9 @@ const BoatIcon: React.FC<BoatIconProps> = ({
   // Format wind speed to one decimal place if available
   const formattedWindSpeed =
     windSpeed !== undefined ? windSpeed.toFixed(1) : "";
+
+  // Calculate wind arrow rotation based on TWA if provided, otherwise use windDirection
+  const arrowRotation = getWindDirection(heading || 0, windDirection || 0);
 
   return (
     <div style={{ position: "relative" }}>
@@ -50,20 +75,25 @@ const BoatIcon: React.FC<BoatIconProps> = ({
           style={{ fill: color }}
         />
       </svg>
-      {showWindArrow && !!windDirection && (
+
+      {/* Wind Arrow - now using TWA for rotation if available */}
+      {showWindArrow && arrowRotation !== undefined && (
         <div
           style={{
             position: "absolute",
             top: "16px",
             left: "5px",
-            transform: `rotate(${windDirection}deg)`,
+            transform: `rotate(${arrowRotation}deg)`,
             fontSize: "24px",
             fontWeight: "bold",
+            color: windArrowColor,
           }}
         >
           <span>↑</span>
         </div>
       )}
+
+      {/* Wind Speed */}
       {formattedWindSpeed && (
         <span
           style={{
