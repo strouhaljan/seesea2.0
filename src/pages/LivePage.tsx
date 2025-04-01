@@ -19,7 +19,7 @@ export const LivePage = () => {
       try {
         setLoading(true);
         // Fetch live data from the API
-        const response = await fetch("/seesea/api/cc_event/201606/data/live");
+        const response = await fetch("/api/cc_event/201606/data/live");
 
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);

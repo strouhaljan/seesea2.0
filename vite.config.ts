@@ -7,9 +7,10 @@ export default defineConfig({
   // Add proxy for the live API
   server: {
     proxy: {
-      "/seesea": {
+      "/api": {
         target: "https://app.seesea.cz",
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
