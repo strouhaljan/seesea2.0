@@ -177,4 +177,21 @@ main {
     opacity: 1;
   }
 }
+
+/* Vessel data tooltip styling */
+.vessel-data {
+  font-size: 11px;
+  border-collapse: collapse;
+  margin-top: 3px;
+}
+
+.vessel-data td {
+  padding: 2px 4px;
+}
+
+.vessel-data td:first-child {
+  color: #555;
+  font-weight: 500;
+  padding-right: 8px;
+}
 }

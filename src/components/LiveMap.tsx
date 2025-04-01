@@ -77,6 +77,26 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         const el = marker.getElement();
         const svg = generateSailboatSvg(vesselId, rotation);
         el.innerHTML = svg;
+        
+        // Also update the popup content with latest data
+        const vesselColor = generateColorFromId(vesselId);
+        marker.getPopup().setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
+          <strong>Vessel ID: ${vesselId}</strong>
+          <table class="vessel-data">
+            <tr>
+              <td>Speed:</td>
+              <td>${data.sog?.toFixed(1) || '?'} knots</td>
+            </tr>
+            <tr>
+              <td>Wind Direction:</td>
+              <td>${data.twa?.toFixed(1) || '?'}°</td>
+            </tr>
+            <tr>
+              <td>Wind Speed:</td>
+              <td>${data.tws?.toFixed(1) || '?'} knots</td>
+            </tr>
+          </table>
+        </div>`);
       } else {
         // Create new marker
         const el = document.createElement('div');
@@ -92,15 +112,27 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         // Get vessel color for consistency
         const vesselColor = generateColorFromId(vesselId);
         
-        // Add popup with vessel info and color
+        // Add popup with vessel info, color, and wind data
         const popup = new mapboxgl.Popup({
           closeButton: false,
           closeOnClick: false,
           offset: 25
         }).setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
           <strong>Vessel ID: ${vesselId}</strong>
-          <br>
-          <span>Speed: ${data.sog?.toFixed(1) || '?'} knots</span>
+          <table class="vessel-data">
+            <tr>
+              <td>Speed:</td>
+              <td>${data.sog?.toFixed(1) || '?'} knots</td>
+            </tr>
+            <tr>
+              <td>Wind Direction:</td>
+              <td>${data.twa?.toFixed(1) || '?'}°</td>
+            </tr>
+            <tr>
+              <td>Wind Speed:</td>
+              <td>${data.tws?.toFixed(1) || '?'} knots</td>
+            </tr>
+          </table>
         </div>`);
         
         // Create the marker
