@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
-import { generateSailboatSvg, generateColorFromId } from "../utils/svgGenerator";
+import {
+  generateSailboatSvg,
+  generateColorFromId,
+} from "../utils/svgGenerator";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
@@ -19,14 +22,13 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
   const markersRef = useRef<Record<string, Marker>>({});
   const routeLinesRef = useRef<string[]>([]);
 
-  // Initialize map on component mount
   useEffect(() => {
     if (!mapContainer.current) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/outdoors-v12", // Using outdoors style for nautical context
-      center: [15.5, 43.8], // Initial center position (will be adjusted based on data)
+      style: "mapbox://styles/mapbox/outdoors-v12",
+      center: [15.5, 43.8],
       zoom: 9,
     });
 
@@ -39,9 +41,9 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
     };
   }, []);
 
-  // Add all vessels and routes to the map
   useEffect(() => {
-    if (!mapLoaded || !map.current || Object.keys(vesselsData).length === 0) return;
+    if (!mapLoaded || !map.current || Object.keys(vesselsData).length === 0)
+      return;
 
     // Calculate bounds to fit all coordinates from all vessels
     let allBounds = new LngLatBounds();
@@ -52,14 +54,14 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         // Initialize bounds with first point if this is the first valid vessel
         if (!hasValidBounds) {
           allBounds = new LngLatBounds(
-            trackData[0].coords as [number, number], 
-            trackData[0].coords as [number, number]
+            trackData[0].coords as [number, number],
+            trackData[0].coords as [number, number],
           );
           hasValidBounds = true;
         }
-        
+
         // Extend bounds with all points from this vessel
-        trackData.forEach(point => {
+        trackData.forEach((point) => {
           allBounds.extend(point.coords as [number, number]);
         });
       }
@@ -82,7 +84,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
       // Add route line source and layer if not already added
       const routeSourceId = `route-${vesselId}`;
       const routeLayerId = `route-line-${vesselId}`;
-      
+
       if (!map.current!.getSource(routeSourceId)) {
         map.current!.addSource(routeSourceId, {
           type: "geojson",
@@ -91,7 +93,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
         // Get the same color as used for the vessel marker
         const routeColor = generateColorFromId(vesselId);
-        
+
         map.current!.addLayer({
           id: routeLayerId,
           type: "line",
@@ -111,37 +113,38 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
       // Create vessel marker if not already created
       if (!markersRef.current[vesselId]) {
-        const el = document.createElement('div');
-        el.className = 'vessel-marker';
-        el.style.width = '24px';
-        el.style.height = '24px';
-        
+        const el = document.createElement("div");
+        el.className = "vessel-marker";
+        el.style.width = "24px";
+        el.style.height = "24px";
+
         // Generate initial SVG
         const svg = generateSailboatSvg(vesselId, 0);
         el.innerHTML = svg;
-        
+
         // Get vessel color for consistency
         const vesselColor = generateColorFromId(vesselId);
-        
+
         // Add popup with vessel info and color
         const popup = new mapboxgl.Popup({
           closeButton: false,
           closeOnClick: false,
-          offset: 25
-        }).setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
+          offset: 25,
+        })
+          .setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
           <strong>Vessel ID: ${vesselId}</strong>
         </div>`);
-        
+
         // Create the marker
         const marker = new mapboxgl.Marker({
           element: el,
-          anchor: 'center',
-          rotationAlignment: 'map'
+          anchor: "center",
+          rotationAlignment: "map",
         })
           .setLngLat(trackData[0].coords as [number, number])
           .setPopup(popup)
           .addTo(map.current!);
-        
+
         markersRef.current[vesselId] = marker;
       }
     });
@@ -154,23 +157,23 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
       });
     }
   }, [mapLoaded, vesselsData]);
-  
+
   // Update all vessel markers when currentPointIndex changes
   useEffect(() => {
     if (!map.current) return;
-    
+
     Object.entries(vesselsData).forEach(([vesselId, trackData]) => {
       const marker = markersRef.current[vesselId];
       if (!marker || currentPointIndex >= trackData.length) return;
-      
+
       const currentPoint = trackData[currentPointIndex];
       if (currentPoint) {
         // Set marker position
         marker.setLngLat(currentPoint.coords as [number, number]);
-        
+
         // Get rotation (heading or course)
         const rotation = currentPoint.hdg || currentPoint.cog || 0;
-        
+
         // Update marker by regenerating SVG with new rotation
         const el = marker.getElement();
         const svg = generateSailboatSvg(vesselId, rotation);

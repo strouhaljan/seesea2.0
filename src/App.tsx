@@ -7,10 +7,18 @@ function App() {
       <header>
         <h1>SeeSea 2.0</h1>
         <nav className="main-nav">
-          <Link to="/" className="nav-link" activeProps={{ className: "nav-link active" }}>
+          <Link
+            to="/"
+            className="nav-link"
+            activeProps={{ className: "nav-link active" }}
+          >
             Map View
           </Link>
-          <Link to="/map2" className="nav-link" activeProps={{ className: "nav-link active" }}>
+          <Link
+            to="/map2"
+            className="nav-link"
+            activeProps={{ className: "nav-link active" }}
+          >
             Alternative Map
           </Link>
         </nav>
