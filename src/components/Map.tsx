@@ -22,6 +22,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
   const markersRef = useRef<Record<string, Marker>>({});
   const rootsRef = useRef<Record<string, Root>>({});
   const routeLinesRef = useRef<string[]>([]);
+  const popupsRef = useRef<Record<string, mapboxgl.Popup>>({});
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -122,28 +123,36 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         // Generate initial boat icon
         const root = createRoot(el);
         rootsRef.current[vesselId] = root;
-        
+
         root.render(
-          <BoatIcon 
-            color={generateColorFromId(vesselId)} 
-            width={24} 
-            height={10} 
-            rotation={0} 
-          />
+          <BoatIcon
+            color={generateColorFromId(vesselId)}
+            width={24}
+            height={10}
+            rotation={0}
+          />,
         );
 
         // Get vessel color for consistency
         const vesselColor = generateColorFromId(vesselId);
 
-        // Add popup with vessel info and color
+        // Create popup and store it in the ref
         const popup = new mapboxgl.Popup({
           closeButton: false,
           closeOnClick: false,
           offset: 25,
-        })
-          .setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
-          <strong>Vessel ID: ${vesselId}</strong>
-        </div>`);
+        });
+
+        popupsRef.current[vesselId] = popup;
+
+        // Initial popup content including wind data if available
+        const firstPoint = trackData[0];
+        const initialPopupContent = generatePopupContent(
+          vesselId,
+          firstPoint,
+          vesselColor,
+        );
+        popup.setHTML(initialPopupContent);
 
         // Create the marker
         const marker = new mapboxgl.Marker({
@@ -168,6 +177,48 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
     }
   }, [mapLoaded, vesselsData]);
 
+  // Generate popup content with all available data
+  const generatePopupContent = (
+    vesselId: string,
+    point: VesselDataPoint,
+    vesselColor: string,
+  ): string => {
+    // Add heading if available, otherwise use COG if available
+    let headingInfo = "";
+    if (point.hdg !== undefined) {
+      headingInfo = `<div>Heading: ${point.hdg}°</div>`;
+    } else if (point.cog !== undefined) {
+      headingInfo = `<div>Course: ${point.cog}°</div>`;
+    }
+
+    // Add speed if available
+    const speedInfo =
+      point.sog !== undefined
+        ? `<div>Speed: ${point.sog?.toFixed(1) ?? "-"} kn</div>`
+        : "";
+
+    // Add wind data if available
+    let windInfo = "";
+    if (point.twa !== undefined && point.tws !== undefined) {
+      // Display TWA with port/starboard indication
+      const twaDirection = point.twa < 0 ? "Port" : "Starboard";
+      const twaAbsolute = Math.abs(point.twa);
+      windInfo = `
+        <div>Wind angle: ${twaAbsolute}° ${twaDirection}</div>
+        <div>Wind speed: ${point.tws?.toFixed(1) ?? "-"} kn</div>
+      `;
+    }
+
+    return `
+      <div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
+        <strong>Vessel ID: ${vesselId}</strong>
+        ${headingInfo}
+        ${speedInfo}
+        ${windInfo}
+      </div>
+    `;
+  };
+
   // Update all vessel markers when currentPointIndex changes
   useEffect(() => {
     if (!map.current) return;
@@ -186,22 +237,38 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
         // Update marker with rotated boat icon
         const el = marker.getElement();
-        
+
         if (!rootsRef.current[vesselId]) {
           rootsRef.current[vesselId] = createRoot(el);
         }
-        
+
         rootsRef.current[vesselId].render(
-          <BoatIcon 
-            color={generateColorFromId(vesselId)} 
-            width={24} 
-            height={10} 
+          <BoatIcon
+            color={generateColorFromId(vesselId)}
+            width={24}
+            height={10}
             rotation={rotation}
             windDirection={currentPoint.twa}
             windSpeed={currentPoint.tws}
-            showWindArrow={currentPoint.twa !== undefined && currentPoint.tws !== undefined && currentPoint.tws > 0}
-          />
+            showWindArrow={
+              currentPoint.twa !== undefined &&
+              currentPoint.tws !== undefined &&
+              currentPoint.tws > 0
+            }
+          />,
         );
+
+        // Update popup content with all available data
+        const popup = popupsRef.current[vesselId];
+        if (popup) {
+          const vesselColor = generateColorFromId(vesselId);
+          const popupContent = generatePopupContent(
+            vesselId,
+            currentPoint,
+            vesselColor,
+          );
+          popup.setHTML(popupContent);
+        }
       }
     });
   }, [currentPointIndex, vesselsData]);

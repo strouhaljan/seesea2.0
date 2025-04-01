@@ -255,7 +255,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         marker.setLngLat(data.coords as [number, number]);
 
         // Update rotation
-        const rotation = data.hdg || undefined;
+        const rotation = data.hdg || data.cog || 0;
         const el = marker.getElement();
 
         if (!rootsRef.current[vesselId]) {

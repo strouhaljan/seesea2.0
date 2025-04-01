@@ -6,14 +6,15 @@ const getWindDirection = (heading: number, windDirection: number) => {
   }
 
   // Calculate wind direction based on heading and wind direction
-  let windHeading = heading + windDirection;
+  // let windHeading = heading + windDirection - 90;
+  const windHeading = heading + windDirection;
 
-  windHeading = windHeading < 0 ? windHeading + 360 : windHeading;
+  // windHeading = windHeading < 0 ? windHeading + 360 : windHeading;
 
   // Normalize wind heading to range [0, 360)
-  const normalizedWindHeading = windHeading % 360;
+  // const normalizedWindHeading = windHeading % 360;
 
-  return normalizedWindHeading;
+  return windHeading;
 };
 
 interface BoatIconProps {
@@ -63,7 +64,7 @@ const BoatIcon: React.FC<BoatIconProps> = ({
         viewBox={`0 0 23 ${totalHeight}`}
         className={className}
         style={{
-          transform: `rotate(${rotation}deg)`,
+          transform: `rotate(${rotation + 90}deg)`,
           transformOrigin: "center",
         }}
       >
@@ -89,6 +90,7 @@ const BoatIcon: React.FC<BoatIconProps> = ({
             color: windArrowColor,
           }}
         >
+          {arrowRotation}
           <span>↑</span>
         </div>
       )}
