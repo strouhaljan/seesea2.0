@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
-import { generateSailboatSvg } from "../utils/svgGenerator";
+import { generateSailboatSvg, generateColorFromId } from "../utils/svgGenerator";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
@@ -89,6 +89,9 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
           data: routeData as any,
         });
 
+        // Get the same color as used for the vessel marker
+        const routeColor = generateColorFromId(vesselId);
+        
         map.current!.addLayer({
           id: routeLayerId,
           type: "line",
@@ -98,7 +101,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
             "line-cap": "round",
           },
           paint: {
-            "line-color": "#0077cc",
+            "line-color": routeColor,
             "line-width": 2.5,
           },
         });
@@ -117,12 +120,17 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         const svg = generateSailboatSvg(vesselId, 0);
         el.innerHTML = svg;
         
-        // Add popup with vessel info
+        // Get vessel color for consistency
+        const vesselColor = generateColorFromId(vesselId);
+        
+        // Add popup with vessel info and color
         const popup = new mapboxgl.Popup({
           closeButton: false,
           closeOnClick: false,
           offset: 25
-        }).setHTML(`<strong>Vessel ID: ${vesselId}</strong>`);
+        }).setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
+          <strong>Vessel ID: ${vesselId}</strong>
+        </div>`);
         
         // Create the marker
         const marker = new mapboxgl.Marker({

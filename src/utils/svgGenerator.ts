@@ -10,10 +10,34 @@ export function generateColorFromId(id: string): string {
     hash = id.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  // Convert to hex color with good saturation and brightness
-  const h = Math.abs(hash) % 360; // Hue (0-359)
-  const s = 70 + (Math.abs(hash) % 20); // Saturation (70-89%)
-  const l = 45 + (Math.abs(hash) % 15); // Lightness (45-59%)
+  // Predefined color hues spread around the color wheel for better distinction
+  const hues = [
+    0,    // Red
+    210,  // Blue
+    120,  // Green
+    280,  // Purple
+    30,   // Orange
+    180,  // Cyan
+    330,  // Pink
+    60,   // Yellow-Green
+    240,  // Indigo
+    160,  // Teal
+    300,  // Magenta
+    90,   // Lime
+    270,  // Violet
+    40,   // Amber
+    200,  // Sky Blue
+    340,  // Rose
+    150,  // Sea Green
+    20    // Gold
+  ];
+  
+  // Pick a hue from the predefined list based on hash
+  const h = hues[Math.abs(hash) % hues.length];
+  
+  // Vary saturation and lightness less to ensure good visibility
+  const s = 75 + (Math.abs(hash >> 3) % 15); // Saturation (75-89%)
+  const l = 50 + (Math.abs(hash >> 6) % 10); // Lightness (50-59%)
   
   return hslToHex(h, s, l);
 }
