@@ -2,41 +2,34 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-} from '@tanstack/react-router'
-import MapView from './views/MapView'
-import App from './App'
-import MapView2 from './views/MapView2'
+} from "@tanstack/react-router";
+import App from "./App";
+import { HistoryPage } from "./pages/HistoryPage";
+import { LivePage } from "./pages/LivePage";
 
-// Create a root route
 export const rootRoute = createRootRoute({
   component: App,
-})
+});
 
-// Map view (first route)
-export const mapRoute = createRoute({
+export const livePageRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
-  component: MapView,
-})
+  path: "/",
+  component: LivePage,
+});
 
-// Second map view (with different data)
-export const map2Route = createRoute({
+export const historyPageRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/map2',
-  component: MapView2,
-})
+  path: "/history",
+  component: HistoryPage,
+});
 
-// Create the router with the routes
 export const router = createRouter({
-  routeTree: rootRoute.addChildren([
-    mapRoute,
-    map2Route,
-  ]),
-})
+  routeTree: rootRoute.addChildren([livePageRoute, historyPageRoute]),
+});
 
 // Declare the router types
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface Register {
-    router: typeof router
+    router: typeof router;
   }
 }

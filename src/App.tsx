@@ -12,14 +12,14 @@ function App() {
             className="nav-link"
             activeProps={{ className: "nav-link active" }}
           >
-            Map View
+            Live
           </Link>
           <Link
-            to="/map2"
+            to="/history"
             className="nav-link"
             activeProps={{ className: "nav-link active" }}
           >
-            Alternative Map
+            History
           </Link>
         </nav>
       </header>

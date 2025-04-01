@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import "../App.css";
 import Map from "../components/Map";
 import TimeSlider from "../components/TimeSlider";
-import { TripData } from "../types/tripData";
+import { TripData, VesselDataPoint } from "../types/tripData";
 
-function MapView() {
+export const LivePage = () => {
   const [tripData, setTripData] = useState<TripData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +13,7 @@ function MapView() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Load data from local JSON file in public folder
+        // This will load the same data for now, but you can change it later
         const response = await fetch("/data.json");
 
         if (!response.ok) {
@@ -52,15 +51,27 @@ function MapView() {
   }
 
   return (
-    <div className="controls-container">
-      <Map vesselsData={vesselsData} currentPointIndex={currentPointIndex} />
-      <TimeSlider
-        currentIndex={currentPointIndex}
-        setCurrentIndex={setCurrentPointIndex}
-        timestamps={timestamps}
-      />
+    <div className="map-view">
+      <h2 className="view-title">Alternative Map View</h2>
+      <p className="view-description">
+        This is the second map view (you'll update this later)
+      </p>
+
+      {loading && <div className="loading">Loading trip data...</div>}
+      {error && <div className="error">Error: {error}</div>}
+      {!loading && !error && Object.keys(vesselsData).length > 0 && (
+        <div className="controls-container">
+          <Map
+            vesselsData={vesselsData}
+            currentPointIndex={currentPointIndex}
+          />
+          <TimeSlider
+            currentIndex={currentPointIndex}
+            setCurrentIndex={setCurrentPointIndex}
+            timestamps={timestamps}
+          />
+        </div>
+      )}
     </div>
   );
-}
-
-export default MapView;
+};
