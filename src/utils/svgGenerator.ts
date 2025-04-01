@@ -45,23 +45,14 @@ export function generateSailboatSvg(id: string, rotation: number = 0): string {
   const color = generateColorFromId(id);
   
   // Basic sailboat shape from top view
-  return `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
-    <g transform="rotate(${rotation}, 50, 50)">
-      <!-- Hull -->
-      <path d="M 35,30 L 65,30 L 70,50 L 60,70 L 40,70 L 30,50 Z" fill="${color}" stroke="#000" stroke-width="2"/>
-      
-      <!-- Mast -->
-      <circle cx="50" cy="50" r="4" fill="#333"/>
-      
-      <!-- Main sail -->
-      <path d="M 50,50 L 70,40 L 75,60 Z" fill="#f0f0f0" stroke="#333" stroke-width="1"/>
-      
-      <!-- Jib sail -->
-      <path d="M 50,50 L 30,35 L 25,55 Z" fill="#f8f8f8" stroke="#333" stroke-width="1"/>
-    </g>
-  </svg>
-  `.trim();
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
+<g transform="rotate(${rotation}, 50, 50)">
+<path d="M 35,30 L 65,30 L 70,50 L 60,70 L 40,70 L 30,50 Z" fill="${color}" stroke="#000" stroke-width="2"/>
+<circle cx="50" cy="50" r="4" fill="#333"/>
+<path d="M 50,50 L 70,40 L 75,60 Z" fill="#f0f0f0" stroke="#333" stroke-width="1"/>
+<path d="M 50,50 L 30,35 L 25,55 Z" fill="#f8f8f8" stroke="#333" stroke-width="1"/>
+</g>
+</svg>`.trim();
 }
 
 /**
