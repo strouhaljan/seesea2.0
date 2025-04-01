@@ -3,7 +3,8 @@ import { VesselDataPoint } from "../types/tripData";
 import LiveMap from "../components/LiveMap";
 
 interface LiveData {
-  objects: Record<string, VesselDataPoint[]>;
+  // Support both array format and direct object format
+  objects: Record<string, VesselDataPoint[] | VesselDataPoint>;
 }
 
 export const LivePage = () => {
@@ -32,11 +33,14 @@ export const LivePage = () => {
 
         // Extract the current position for each vessel
         if (data && data.objects) {
-          Object.entries(data.objects).forEach(([vesselId, positionArray]) => {
-            // If there are multiple positions, take the latest one
-            if (Array.isArray(positionArray) && positionArray.length > 0) {
-              currentPositions[vesselId] =
-                positionArray[positionArray.length - 1];
+          Object.entries(data.objects).forEach(([vesselId, positionData]) => {
+            // Handle both array format and direct object format
+            if (Array.isArray(positionData) && positionData.length > 0) {
+              // If array format, take the latest position
+              currentPositions[vesselId] = positionData[positionData.length - 1];
+            } else if (typeof positionData === 'object' && positionData !== null) {
+              // If direct object format, use it directly
+              currentPositions[vesselId] = positionData as VesselDataPoint;
             }
           });
         }
@@ -75,7 +79,10 @@ export const LivePage = () => {
       <div className="live-status">
         <h2 className="view-title">Live Vessel Positions</h2>
         {lastUpdated && (
-          <div className="last-updated">Last updated: {formattedTime}</div>
+          <div className="last-updated">
+            Last updated: {formattedTime}
+            <span className="update-badge">LIVE</span>
+          </div>
         )}
       </div>
 

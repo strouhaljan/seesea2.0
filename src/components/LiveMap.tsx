@@ -41,6 +41,8 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
     
+    console.log('Updating vessel positions with', Object.keys(vesselsData).length, 'vessels');
+    
     // Calculate bounds to fit all vessels
     let allBounds = new LngLatBounds();
     let hasValidBounds = false;
