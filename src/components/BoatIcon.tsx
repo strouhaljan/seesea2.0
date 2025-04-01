@@ -1,18 +1,33 @@
 import React from "react";
 
+// Function to get color based on wind speed
+export const getWindSpeedColor = (windSpeed: number): string => {
+  if (windSpeed <= 0) return "#000000"; // Black for no wind
+  
+  if (windSpeed < 5) return "#00bfff"; // Light blue for light wind
+  if (windSpeed < 10) return "#0080ff"; // Medium blue for moderate wind
+  if (windSpeed < 15) return "#00ff80"; // Light green
+  if (windSpeed < 20) return "#00c000"; // Medium green
+  if (windSpeed < 25) return "#ffd700"; // Yellow
+  if (windSpeed < 30) return "#ff8c00"; // Orange
+  if (windSpeed < 35) return "#ff4500"; // Orange-red
+  
+  return "#ff0000"; // Red for strong wind
+};
+
 const getWindDirection = (heading: number, windDirection: number) => {
-  if (heading === undefined || windDirection === undefined) {
+  if (heading === undefined || windDirection === undefined || 
+      heading === null || windDirection === null) {
     return undefined;
   }
 
   // Calculate wind direction based on heading and wind direction
-  // let windHeading = heading + windDirection - 90;
-  const windHeading = heading + windDirection;
-
-  // windHeading = windHeading < 0 ? windHeading + 360 : windHeading;
-
-  // Normalize wind heading to range [0, 360)
-  // const normalizedWindHeading = windHeading % 360;
+  let windHeading = windDirection + heading + 180;
+  
+  // Normalize negative values
+  if (windHeading < 0) {
+    windHeading += 360;
+  }
 
   return windHeading;
 };
@@ -54,7 +69,8 @@ const BoatIcon: React.FC<BoatIconProps> = ({
     windSpeed !== undefined ? windSpeed.toFixed(1) : "";
 
   // Calculate wind arrow rotation based on TWA if provided, otherwise use windDirection
-  const arrowRotation = getWindDirection(heading || 0, windDirection || 0);
+  const arrowRotation = (windDirection !== undefined && windDirection !== null) ? 
+    getWindDirection(rotation || 0, windDirection) : undefined;
 
   return (
     <div style={{ position: "relative" }}>
@@ -90,12 +106,12 @@ const BoatIcon: React.FC<BoatIconProps> = ({
             color: windArrowColor,
           }}
         >
-          {arrowRotation}
+          {/*{arrowRotation}*/}
           <span>↑</span>
         </div>
       )}
 
-      {/* Wind Speed */}
+      {/* Wind Speed - colored by wind speed gradient */}
       {formattedWindSpeed && (
         <span
           style={{
@@ -104,6 +120,7 @@ const BoatIcon: React.FC<BoatIconProps> = ({
             left: "5px",
             fontSize: "24px",
             fontWeight: "bold",
+            color: getWindSpeedColor(Number(windSpeed) || 0),
           }}
         >
           {formattedWindSpeed}

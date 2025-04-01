@@ -3,6 +3,7 @@ import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
 import { generateColorFromId } from "../utils/svgGenerator";
+import { getWindSpeedColor } from "./BoatIcon";
 import { Feature, Point, GeoJSON } from "geojson";
 import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
@@ -301,7 +302,11 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
                 ? `
             <tr>
               <td>Wind Speed:</td>
-              <td>${data.tws !== null && data.tws !== undefined ? data.tws.toFixed(1) : '?'} knots</td>
+              <td>
+                <span style="color: ${data.tws !== null && data.tws !== undefined ? getWindSpeedColor(data.tws) : '#000000'}; font-weight: bold;">
+                  ${data.tws !== null && data.tws !== undefined ? data.tws.toFixed(1) : '?'}
+                </span> knots
+              </td>
             </tr>
              <tr>
               <td>Heading:</td>
@@ -369,7 +374,11 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
                 ? `
             <tr>
               <td>Wind Speed:</td>
-              <td>${data.tws !== null && data.tws !== undefined ? data.tws.toFixed(1) : '?'} knots</td>
+              <td>
+                <span style="color: ${data.tws !== null && data.tws !== undefined ? getWindSpeedColor(data.tws) : '#000000'}; font-weight: bold;">
+                  ${data.tws !== null && data.tws !== undefined ? data.tws.toFixed(1) : '?'}
+                </span> knots
+              </td>
             </tr>
              <tr>
               <td>Heading:</td>
