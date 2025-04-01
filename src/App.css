@@ -194,4 +194,77 @@ main {
   font-weight: 500;
   padding-right: 8px;
 }
+
+/* Wind heatmap toggle button */
+.wind-toggle-btn {
+  width: 36px !important;
+  height: 36px !important;
+  padding: 5px;
+  font-size: 18px;
+  cursor: pointer;
+  margin-right: 10px;
+  margin-top: 10px;
+  background-color: white;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.wind-toggle-btn:hover {
+  background-color: #f8f8f8;
+}
+
+.wind-toggle-btn.active {
+  background-color: #e0f7fa;
+  box-shadow: 0 0 0 2px rgba(0, 128, 255, 0.5);
+}
+
+/* Map wrapper for positioning items */
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Wind legend styles */
+.wind-legend {
+  position: absolute;
+  bottom: 100px;
+  right: 10px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 8px 12px;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  z-index: 5;
+  max-width: 180px;
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.legend-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
 }
