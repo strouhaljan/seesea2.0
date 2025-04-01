@@ -1,0 +1,65 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  height: 100%;
+  width: 100%;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+header {
+  background-color: #1a1a2e;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+}
+
+main {
+  flex: 1;
+  position: relative;
+}
+
+.map-container {
+  height: 100%;
+  width: 100%;
+}
+
+.loading, .error {
+  align-items: center;
+  display: flex;
+  font-size: 1.25rem;
+  height: 100%;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.error {
+  color: #e63946;
+}
+
+.vessel-marker {
+  cursor: pointer;
+  text-shadow: 0 0 3px white, 0 0 5px white;
+}
+
+.controls-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+}
