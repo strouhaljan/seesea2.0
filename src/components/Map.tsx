@@ -109,17 +109,12 @@ const Map = ({ vesselTrackData, currentPointIndex, vesselId }: MapProps) => {
         maxZoom: 14,
       });
       
-      // Create SVG for the vessel marker
-      const initialSvg = generateSailboatSvg(vesselId, 0);
-      
-      // Create current position marker
+      // Create the marker element with a fallback emoji
       const el = document.createElement('div');
       el.className = 'vessel-marker';
-      el.style.backgroundImage = `url(${svgToDataUrl(initialSvg)})`;
       el.style.width = '32px';
       el.style.height = '32px';
-      el.style.backgroundSize = 'contain';
-      el.style.backgroundRepeat = 'no-repeat';
+      el.innerHTML = '⛵'; // Fallback emoji
       
       currentMarkerRef.current = new mapboxgl.Marker({
         element: el,
@@ -143,10 +138,9 @@ const Map = ({ vesselTrackData, currentPointIndex, vesselId }: MapProps) => {
       // Get rotation (heading or course)
       const rotation = currentPoint.hdg || currentPoint.cog || 0;
       
-      // Update marker with new rotation
+      // Update marker rotation directly
       const el = currentMarkerRef.current.getElement();
-      const svg = generateSailboatSvg(vesselId, rotation);
-      el.style.backgroundImage = `url(${svgToDataUrl(svg)})`;
+      el.style.transform = `rotate(${rotation}deg)`;
       
       // Pan map to follow vessel
       map.current.easeTo({

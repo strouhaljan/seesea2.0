@@ -70,5 +70,10 @@ export function generateSailboatSvg(id: string, rotation: number = 0): string {
  * @returns Data URL for use in image src
  */
 export function svgToDataUrl(svgContent: string): string {
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgContent)}`;
+  // Double-check that we're properly encoding
+  const encoded = encodeURIComponent(svgContent)
+    .replace(/'/g, '%27')
+    .replace(/"/g, '%22');
+    
+  return `data:image/svg+xml;charset=utf-8,${encoded}`;
 }

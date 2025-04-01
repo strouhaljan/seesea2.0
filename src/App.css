@@ -54,11 +54,13 @@ main {
 
 .vessel-marker {
   cursor: pointer;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
   transition: all 0.3s ease-in-out;
   filter: drop-shadow(0px 0px 3px white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  text-align: center;
 }
 
 .controls-container {
