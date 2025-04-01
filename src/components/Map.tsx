@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, createElement } from "react";
 import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
-import {
-  generateSailboatSvg,
-  generateColorFromId,
-} from "../utils/svgGenerator";
+import { generateColorFromId } from "../utils/svgGenerator";
+import BoatIcon from "./BoatIcon";
+import { createRoot } from "react-dom/client";
+import { Root } from "react-dom/client";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
@@ -20,6 +20,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const markersRef = useRef<Record<string, Marker>>({});
+  const rootsRef = useRef<Record<string, Root>>({});
   const routeLinesRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -118,9 +119,18 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         el.style.width = "24px";
         el.style.height = "24px";
 
-        // Generate initial SVG
-        const svg = generateSailboatSvg(vesselId, 0);
-        el.innerHTML = svg;
+        // Generate initial boat icon
+        const root = createRoot(el);
+        rootsRef.current[vesselId] = root;
+        
+        root.render(
+          <BoatIcon 
+            color={generateColorFromId(vesselId)} 
+            width={24} 
+            height={10} 
+            rotation={0} 
+          />
+        );
 
         // Get vessel color for consistency
         const vesselColor = generateColorFromId(vesselId);
@@ -174,10 +184,21 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         // Get rotation (heading or course)
         const rotation = currentPoint.hdg || currentPoint.cog || 0;
 
-        // Update marker by regenerating SVG with new rotation
+        // Update marker with rotated boat icon
         const el = marker.getElement();
-        const svg = generateSailboatSvg(vesselId, rotation);
-        el.innerHTML = svg;
+        
+        if (!rootsRef.current[vesselId]) {
+          rootsRef.current[vesselId] = createRoot(el);
+        }
+        
+        rootsRef.current[vesselId].render(
+          <BoatIcon 
+            color={generateColorFromId(vesselId)} 
+            width={24} 
+            height={10} 
+            rotation={rotation} 
+          />
+        );
       }
     });
   }, [currentPointIndex, vesselsData]);

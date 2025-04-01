@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, createElement } from "react";
 import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
-import { generateSailboatSvg, generateColorFromId } from "../utils/svgGenerator";
+import { generateColorFromId } from "../utils/svgGenerator";
+import BoatIcon from "./BoatIcon";
+import { createRoot } from "react-dom/client";
+import { Root } from "react-dom/client";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
@@ -16,6 +19,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const markersRef = useRef<Record<string, Marker>>({});
+  const rootsRef = useRef<Record<string, Root>>({});
 
   // Initialize map on component mount
   useEffect(() => {
@@ -75,8 +79,19 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         // Update rotation
         const rotation = data.hdg || data.cog || 0;
         const el = marker.getElement();
-        const svg = generateSailboatSvg(vesselId, rotation);
-        el.innerHTML = svg;
+        
+        if (!rootsRef.current[vesselId]) {
+          rootsRef.current[vesselId] = createRoot(el);
+        }
+        
+        rootsRef.current[vesselId].render(
+          <BoatIcon 
+            color={generateColorFromId(vesselId)} 
+            width={24} 
+            height={10} 
+            rotation={rotation} 
+          />
+        );
         
         // Also update the popup content with latest data
         const vesselColor = generateColorFromId(vesselId);
@@ -104,10 +119,19 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         el.style.width = '24px';
         el.style.height = '24px';
         
-        // Generate initial SVG
+        // Generate initial boat icon
         const rotation = data.hdg || data.cog || 0;
-        const svg = generateSailboatSvg(vesselId, rotation);
-        el.innerHTML = svg;
+        const root = createRoot(el);
+        rootsRef.current[vesselId] = root;
+        
+        root.render(
+          <BoatIcon 
+            color={generateColorFromId(vesselId)} 
+            width={24} 
+            height={10} 
+            rotation={rotation} 
+          />
+        );
         
         // Get vessel color for consistency
         const vesselColor = generateColorFromId(vesselId);
@@ -153,6 +177,10 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
     existingVesselIds.forEach(id => {
       if (!currentVesselIds.has(id)) {
         markersRef.current[id].remove();
+        if (rootsRef.current[id]) {
+          // Unmount the root before deleting
+          delete rootsRef.current[id];
+        }
         delete markersRef.current[id];
       }
     });
