@@ -292,7 +292,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
                 ? `
             <tr>
               <td>Wind Direction:</td>
-              <td>${data.twa.toFixed(1)}°</td>
+              <td>${data.twa !== null && data.twa !== undefined ? data.twa.toFixed(1) : '?'}°</td>
             </tr>`
                 : ""
             }
@@ -301,11 +301,11 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
                 ? `
             <tr>
               <td>Wind Speed:</td>
-              <td>${data.tws.toFixed(1)} knots</td>
+              <td>${data.tws !== null && data.tws !== undefined ? data.tws.toFixed(1) : '?'} knots</td>
             </tr>
              <tr>
               <td>Heading:</td>
-              <td>${data.hdg.toFixed(1)} deg</td>
+              <td>${data.hdg !== null && data.hdg !== undefined ? data.hdg.toFixed(1) : '?'} deg</td>
             </tr>
             `
                 : ""
@@ -360,7 +360,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
                 ? `
             <tr>
               <td>Wind Direction:</td>
-              <td>${data.twa.toFixed(1)}°</td>
+              <td>${data.twa !== null && data.twa !== undefined ? data.twa.toFixed(1) : '?'}°</td>
             </tr>`
                 : ""
             }
@@ -369,11 +369,11 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
                 ? `
             <tr>
               <td>Wind Speed:</td>
-              <td>${data.tws.toFixed(1)} knots</td>
+              <td>${data.tws !== null && data.tws !== undefined ? data.tws.toFixed(1) : '?'} knots</td>
             </tr>
              <tr>
               <td>Heading:</td>
-              <td>${data.hdg.toFixed(1)} deg</td>
+              <td>${data.hdg !== null && data.hdg !== undefined ? data.hdg.toFixed(1) : '?'} deg</td>
             </tr>`
                 : ""
             }
