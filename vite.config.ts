@@ -10,7 +10,7 @@ export default defineConfig({
       "/api": {
         target: "https://app.seesea.cz",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        secure: false,
       },
     },
   },
