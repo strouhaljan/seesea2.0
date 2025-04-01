@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   // Add proxy for the live API
   server: {
-    port: 81,
+    // port: 81,
     proxy: {
       "/seesea": {
         target: "https://app.seesea.cz",
