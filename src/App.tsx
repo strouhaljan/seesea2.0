@@ -36,13 +36,20 @@ function App() {
     fetchData();
   }, []);
 
-  // Extract vessel track data for the specific vessel ID we're interested in
-  const vesselTrackData = tripData?.objects["201502636"] as
-    | VesselDataPoint[]
-    | undefined;
+  // Get all vessel data
+  const vesselsData = tripData?.objects || {};
+  
+  // Find a common timeline from all vessels
+  const timestamps: number[] = [];
+  
+  if (Object.keys(vesselsData).length > 0) {
+    // Get the first vessel to extract timestamps
+    const firstVesselId = Object.keys(vesselsData)[0];
+    const firstVesselData = vesselsData[firstVesselId] || [];
     
-  // Extract timestamps for slider
-  const timestamps = vesselTrackData?.map(point => point.time) || [];
+    // Extract timestamps from first vessel (assuming all vessels have similar timestamps)
+    timestamps.push(...(firstVesselData.map(point => point.time) || []));
+  }
 
   return (
     <div className="app-container">
@@ -52,12 +59,11 @@ function App() {
       <main>
         {loading && <div className="loading">Loading trip data...</div>}
         {error && <div className="error">Error: {error}</div>}
-        {!loading && !error && vesselTrackData && (
+        {!loading && !error && Object.keys(vesselsData).length > 0 && (
           <div className="controls-container">
             <Map 
-              vesselTrackData={vesselTrackData} 
+              vesselsData={vesselsData} 
               currentPointIndex={currentPointIndex}
-              vesselId="201502636"
             />
             <TimeSlider
               currentIndex={currentPointIndex}
