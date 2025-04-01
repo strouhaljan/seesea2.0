@@ -56,7 +56,8 @@ function App() {
           <div className="controls-container">
             <Map 
               vesselTrackData={vesselTrackData} 
-              currentPointIndex={currentPointIndex} 
+              currentPointIndex={currentPointIndex}
+              vesselId="201502636"
             />
             <TimeSlider
               currentIndex={currentPointIndex}

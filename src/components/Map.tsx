@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
+import { generateSailboatSvg, svgToDataUrl } from "../utils/svgGenerator";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
@@ -9,9 +10,10 @@ mapboxgl.accessToken =
 interface MapProps {
   vesselTrackData: VesselDataPoint[];
   currentPointIndex: number;
+  vesselId: string;
 }
 
-const Map = ({ vesselTrackData, currentPointIndex }: MapProps) => {
+const Map = ({ vesselTrackData, currentPointIndex, vesselId }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -107,13 +109,23 @@ const Map = ({ vesselTrackData, currentPointIndex }: MapProps) => {
         maxZoom: 14,
       });
       
+      // Create SVG for the vessel marker
+      const initialSvg = generateSailboatSvg(vesselId, 0);
+      
       // Create current position marker
       const el = document.createElement('div');
       el.className = 'vessel-marker';
-      el.innerHTML = '⛵';
-      el.style.fontSize = '24px';
+      el.style.backgroundImage = `url(${svgToDataUrl(initialSvg)})`;
+      el.style.width = '32px';
+      el.style.height = '32px';
+      el.style.backgroundSize = 'contain';
+      el.style.backgroundRepeat = 'no-repeat';
       
-      currentMarkerRef.current = new mapboxgl.Marker(el)
+      currentMarkerRef.current = new mapboxgl.Marker({
+        element: el,
+        anchor: 'center',
+        rotationAlignment: 'map'
+      })
         .setLngLat(vesselTrackData[0].coords as [number, number])
         .addTo(map.current);
     }
@@ -128,10 +140,13 @@ const Map = ({ vesselTrackData, currentPointIndex }: MapProps) => {
       // Set marker position
       currentMarkerRef.current.setLngLat(currentPoint.coords as [number, number]);
       
-      // Optionally rotate marker to match heading
-      const el = currentMarkerRef.current.getElement();
+      // Get rotation (heading or course)
       const rotation = currentPoint.hdg || currentPoint.cog || 0;
-      el.style.transform = `rotate(${rotation}deg)`;
+      
+      // Update marker with new rotation
+      const el = currentMarkerRef.current.getElement();
+      const svg = generateSailboatSvg(vesselId, rotation);
+      el.style.backgroundImage = `url(${svgToDataUrl(svg)})`;
       
       // Pan map to follow vessel
       map.current.easeTo({
