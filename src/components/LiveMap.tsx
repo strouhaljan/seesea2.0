@@ -75,6 +75,16 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
     });
 
     return () => {
+      // Clean up all React roots
+      Object.values(rootsRef.current).forEach(root => {
+        try {
+          root.unmount();
+        } catch (e) {
+          console.error("Error unmounting React root:", e);
+        }
+      });
+      
+      // Remove the map instance (which will clean up all layers and sources)
       map.current?.remove();
     };
   }, []);
