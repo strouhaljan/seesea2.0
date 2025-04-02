@@ -8,6 +8,7 @@ import { Feature, Point, GeoJSON } from "geojson";
 import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
+import { crewList } from "../crewlist";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
@@ -53,6 +54,8 @@ const generateWindHeatmapData = (
     features,
   };
 };
+
+console.log({ crewList });
 
 const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -265,6 +268,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
         rootsRef.current[vesselId].render(
           <BoatIcon
+            crewId={parseInt(vesselId)}
             color={generateColorFromId(vesselId)}
             width={24}
             height={10}
@@ -284,6 +288,14 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
           .setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
           <strong>Vessel ID: ${vesselId}</strong>
           <table class="vessel-data">
+          <tr>
+              <td>Crew:</td>
+              <td>${
+                crewList.cc_object.find(
+                  (crew) => crew.id === parseInt(vesselId),
+                )?.description
+              }</td>
+            </tr>
             <tr>
               <td>Speed:</td>
               <td>${data.sog?.toFixed(1) || "?"} knots</td>
@@ -347,6 +359,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
         root.render(
           <BoatIcon
+            crewId={parseInt(vesselId)}
             color={generateColorFromId(vesselId)}
             width={24}
             height={10}

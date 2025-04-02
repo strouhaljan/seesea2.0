@@ -1,5 +1,7 @@
 import React from "react";
 
+import { crewList } from "../crewlist";
+
 // Function to get color based on wind speed
 export const getWindSpeedColor = (windSpeed?: number): string => {
   if (!windSpeed || windSpeed <= 0) return "#000000"; // Black for no wind
@@ -37,6 +39,7 @@ const getWindDirection = (heading: number, windDirection: number) => {
 };
 
 interface BoatIconProps {
+  crewId?: number;
   color?: string;
   width?: number;
   height?: number;
@@ -50,6 +53,7 @@ interface BoatIconProps {
 }
 
 const BoatIcon: React.FC<BoatIconProps> = ({
+  crewId,
   color = "#392ABF",
   width = 23,
   height = 10,
@@ -76,6 +80,12 @@ const BoatIcon: React.FC<BoatIconProps> = ({
 
   const hullColor = getWindSpeedColor(windSpeed);
 
+  console.log(
+    crewList.cc_object.find((crew) => crew.id === crewId)?.highlight
+      ? "#fff"
+      : "transparent",
+  );
+
   return (
     <div style={{ position: "relative" }}>
       <svg
@@ -83,6 +93,7 @@ const BoatIcon: React.FC<BoatIconProps> = ({
         height={24}
         viewBox={`0 0 24 24`}
         className={className}
+        strokeWidth={1}
         fill={hullColor ?? "#fff"}
         style={{
           transform: `rotate(${rotation + 90}deg)`,
@@ -95,6 +106,9 @@ const BoatIcon: React.FC<BoatIconProps> = ({
         c4.83,1.76,11.67,0.95,14.7,0.37C21.43,9.67,23,9.39,23,7.28c0-1.61,0-2.02,0-2.02l0,0c0,0,0-0.4,0-2.02
         C23,1.15,21.43,0.87,20.53,0.7z"
         />
+        {crewList.cc_object.find((crew) => crew.id === crewId)?.highlight ? (
+          <circle r="5" cx="12" cy="12" fill="red" />
+        ) : null}
       </svg>
 
       {/* Wind Arrow - now using TWA for rotation if available */}
