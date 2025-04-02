@@ -64,10 +64,6 @@ const BoatIcon: React.FC<BoatIconProps> = ({
   if (!rotation) {
     return null;
   }
-  // Calculate total height to accommodate the wind arrow and speed label
-  const totalHeight =
-    showWindArrow && windDirection !== undefined ? height * 2.5 : height;
-
   // Format wind speed to one decimal place if available
   const formattedWindSpeed =
     windSpeed !== undefined ? windSpeed.toFixed(1) : "";
@@ -83,13 +79,11 @@ const BoatIcon: React.FC<BoatIconProps> = ({
   return (
     <div style={{ position: "relative" }}>
       <svg
-        width={width}
-        height={totalHeight}
-        viewBox={`0 0 23 ${totalHeight}`}
+        width={24}
+        height={24}
+        viewBox={`0 0 24 24`}
         className={className}
-        fill={hullColor}
-        // stroke="#fff"
-        // strokeWidth="1"
+        fill={hullColor ?? "#fff"}
         style={{
           transform: `rotate(${rotation + 90}deg)`,
           transformOrigin: "center",
@@ -112,7 +106,6 @@ const BoatIcon: React.FC<BoatIconProps> = ({
             left: "0px",
             transform: `rotate(${arrowRotation}deg)`,
             fontSize: "32px",
-            fontWeight: "bold",
             color: "#fff",
           }}
         >
@@ -125,11 +118,10 @@ const BoatIcon: React.FC<BoatIconProps> = ({
         <span
           style={{
             position: "absolute",
-            top: "0",
-            left: "16px",
-            fontSize: "20px",
+            top: "-24px",
+            left: "0px",
+            fontSize: "16px",
             fontWeight: "bold",
-            // "-webkit-text-stroke": "1px black",
             color: "#fff",
           }}
         >
