@@ -59,7 +59,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const markersRef = useRef<Record<string, Marker>>({});
-  const [showWindHeatmap, setShowWindHeatmap] = useState(true);
+  const [showWindHeatmap, setShowWindHeatmap] = useState(false);
   const rootsRef = useRef<Record<string, Root>>({});
 
   // Initialize map on component mount
