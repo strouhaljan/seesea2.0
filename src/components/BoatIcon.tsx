@@ -1,9 +1,9 @@
 import React from "react";
 
 // Function to get color based on wind speed
-export const getWindSpeedColor = (windSpeed: number): string => {
-  if (windSpeed <= 0) return "#000000"; // Black for no wind
-  
+export const getWindSpeedColor = (windSpeed?: number): string => {
+  if (!windSpeed || windSpeed <= 0) return "#000000"; // Black for no wind
+
   if (windSpeed < 5) return "#00bfff"; // Light blue for light wind
   if (windSpeed < 10) return "#0080ff"; // Medium blue for moderate wind
   if (windSpeed < 15) return "#00ff80"; // Light green
@@ -11,19 +11,23 @@ export const getWindSpeedColor = (windSpeed: number): string => {
   if (windSpeed < 25) return "#ffd700"; // Yellow
   if (windSpeed < 30) return "#ff8c00"; // Orange
   if (windSpeed < 35) return "#ff4500"; // Orange-red
-  
+
   return "#ff0000"; // Red for strong wind
 };
 
 const getWindDirection = (heading: number, windDirection: number) => {
-  if (heading === undefined || windDirection === undefined || 
-      heading === null || windDirection === null) {
+  if (
+    heading === undefined ||
+    windDirection === undefined ||
+    heading === null ||
+    windDirection === null
+  ) {
     return undefined;
   }
 
   // Calculate wind direction based on heading and wind direction
   let windHeading = windDirection + heading + 180;
-  
+
   // Normalize negative values
   if (windHeading < 0) {
     windHeading += 360;
@@ -69,8 +73,12 @@ const BoatIcon: React.FC<BoatIconProps> = ({
     windSpeed !== undefined ? windSpeed.toFixed(1) : "";
 
   // Calculate wind arrow rotation based on TWA if provided, otherwise use windDirection
-  const arrowRotation = (windDirection !== undefined && windDirection !== null) ? 
-    getWindDirection(rotation || 0, windDirection) : undefined;
+  const arrowRotation =
+    windDirection !== undefined && windDirection !== null
+      ? getWindDirection(rotation || 0, windDirection)
+      : undefined;
+
+  const hullColor = getWindSpeedColor(windSpeed);
 
   return (
     <div style={{ position: "relative" }}>
@@ -79,6 +87,9 @@ const BoatIcon: React.FC<BoatIconProps> = ({
         height={totalHeight}
         viewBox={`0 0 23 ${totalHeight}`}
         className={className}
+        fill={hullColor}
+        // stroke="#fff"
+        // strokeWidth="1"
         style={{
           transform: `rotate(${rotation + 90}deg)`,
           transformOrigin: "center",
@@ -89,7 +100,6 @@ const BoatIcon: React.FC<BoatIconProps> = ({
           d="M20.53,0.7c-3.03-0.58-9.87-1.39-14.7,0.37C1.03,2.82,0,5.27,0,5.27l0,0l0,0l0,0l0,0c0,0,1.03,2.45,5.83,4.2
         c4.83,1.76,11.67,0.95,14.7,0.37C21.43,9.67,23,9.39,23,7.28c0-1.61,0-2.02,0-2.02l0,0c0,0,0-0.4,0-2.02
         C23,1.15,21.43,0.87,20.53,0.7z"
-          style={{ fill: color }}
         />
       </svg>
 
@@ -98,15 +108,14 @@ const BoatIcon: React.FC<BoatIconProps> = ({
         <div
           style={{
             position: "absolute",
-            top: "16px",
-            left: "5px",
+            top: "32px",
+            left: "0px",
             transform: `rotate(${arrowRotation}deg)`,
-            fontSize: "24px",
+            fontSize: "32px",
             fontWeight: "bold",
-            color: windArrowColor,
+            color: "#fff",
           }}
         >
-          {/*{arrowRotation}*/}
           <span>↑</span>
         </div>
       )}
@@ -117,10 +126,11 @@ const BoatIcon: React.FC<BoatIconProps> = ({
           style={{
             position: "absolute",
             top: "0",
-            left: "5px",
-            fontSize: "24px",
+            left: "16px",
+            fontSize: "20px",
             fontWeight: "bold",
-            color: getWindSpeedColor(Number(windSpeed) || 0),
+            // "-webkit-text-stroke": "1px black",
+            color: "#fff",
           }}
         >
           {formattedWindSpeed}

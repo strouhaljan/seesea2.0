@@ -29,7 +29,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/outdoors-v12",
+      style: "mapbox://styles/mapbox/dark-v11",
       center: [15.5, 43.8],
       zoom: 9,
     });
