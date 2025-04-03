@@ -7,7 +7,7 @@ import { Feature, Point, GeoJSON } from "geojson";
 import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
-import { crewList } from "../crewlist";
+import { crewList } from "../crewList";
 import { getColorBySpeed } from "../utils/wind";
 
 mapboxgl.accessToken =
@@ -54,8 +54,6 @@ const generateWindHeatmapData = (
     features,
   };
 };
-
-console.log({ crewList });
 
 const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -291,9 +289,8 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
           <tr>
               <td>Crew:</td>
               <td>${
-                crewList.cc_object.find(
-                  (crew) => crew.id === parseInt(vesselId),
-                )?.description
+                crewList.find((crew) => crew.id === parseInt(vesselId))
+                  ?.description
               }</td>
             </tr>
             <tr>

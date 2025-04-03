@@ -1,6 +1,6 @@
 import React from "react";
 
-import { crewList } from "../crewlist";
+import { crewList } from "../crewList";
 import { getDirection, getColorBySpeed } from "../utils/wind";
 
 interface BoatIconProps {
@@ -45,12 +45,6 @@ const BoatIcon: React.FC<BoatIconProps> = ({
 
   const hullColor = getColorBySpeed(windSpeed);
 
-  console.log(
-    crewList.cc_object.find((crew) => crew.id === crewId)?.highlight
-      ? "#fff"
-      : "transparent",
-  );
-
   return (
     <div style={{ position: "relative" }}>
       <svg
@@ -71,7 +65,8 @@ const BoatIcon: React.FC<BoatIconProps> = ({
         c4.83,1.76,11.67,0.95,14.7,0.37C21.43,9.67,23,9.39,23,7.28c0-1.61,0-2.02,0-2.02l0,0c0,0,0-0.4,0-2.02
         C23,1.15,21.43,0.87,20.53,0.7z"
         />
-        {crewList.cc_object.find((crew) => crew.id === crewId)?.highlight ? (
+        {/* Highlight */}
+        {crewList.find((crew) => crew.id === crewId)?.highlight ? (
           <circle r="5" cx="12" cy="12" fill="red" />
         ) : null}
       </svg>
