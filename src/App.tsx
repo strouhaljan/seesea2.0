@@ -11,7 +11,7 @@ function App() {
           flexDirection: "row",
         }}
       >
-        <h1>SeeSea 2.0</h1>
+        <h1>VR map</h1>
         <nav className="main-nav">
           <Link
             to="/"
