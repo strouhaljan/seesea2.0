@@ -3,12 +3,12 @@ import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
 import { generateColorFromId } from "../utils/svgGenerator";
-import { getWindSpeedColor } from "./BoatIcon";
 import { Feature, Point, GeoJSON } from "geojson";
 import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 import { crewList } from "../crewlist";
+import { getColorBySpeed } from "../utils/wind";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
@@ -321,7 +321,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
               <td>
                 <span style="color: ${
                   data.tws !== null && data.tws !== undefined
-                    ? getWindSpeedColor(data.tws)
+                    ? getColorBySpeed(data.tws)
                     : "#000000"
                 }; font-weight: bold;">
                   ${
@@ -410,7 +410,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
               <td>
                 <span style="color: ${
                   data.tws !== null && data.tws !== undefined
-                    ? getWindSpeedColor(data.tws)
+                    ? getColorBySpeed(data.tws)
                     : "#000000"
                 }; font-weight: bold;">
                   ${
