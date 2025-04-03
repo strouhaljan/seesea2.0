@@ -106,6 +106,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
           },
           paint: {
             "line-color": routeColor,
+            "line-opacity": 0.1,
             "line-width": 2.5,
           },
         });
