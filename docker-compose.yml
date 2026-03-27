@@ -12,3 +12,15 @@ services:
       - ./public:/app/public
     environment:
       - NODE_ENV=development
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./public:/app/public
+    environment:
+      - PORT=3001
+      - HISTORY_DATA_PATH=/app/public/data.json
