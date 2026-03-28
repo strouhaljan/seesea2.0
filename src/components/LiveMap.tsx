@@ -27,11 +27,23 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const markersRef = useRef<Record<string, Marker>>({});
-  const [colorMode, setColorMode] = useState<ColorMode>("seesea");
-  const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(false);
+  const [colorMode, setColorMode] = useState<ColorMode>(
+    () => (localStorage.getItem("colorMode") as ColorMode) || "seesea"
+  );
+  const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(
+    () => localStorage.getItem("showOnlyHighlighted") === "true"
+  );
   const rootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
   const { crews, highlightedCrews } = useEventConfig();
+
+  useEffect(() => {
+    localStorage.setItem("colorMode", colorMode);
+  }, [colorMode]);
+
+  useEffect(() => {
+    localStorage.setItem("showOnlyHighlighted", String(showOnlyHighlighted));
+  }, [showOnlyHighlighted]);
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
