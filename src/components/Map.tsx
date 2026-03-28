@@ -157,11 +157,18 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         // Create popup and store it in the ref
         const popup = new mapboxgl.Popup({
           closeButton: false,
-          closeOnClick: false,
+          closeOnClick: true,
           offset: 25,
         });
 
         popupsRef.current[vesselId] = popup;
+
+        // Close all other popups when this one opens
+        popup.on("open", () => {
+          Object.entries(popupsRef.current).forEach(([id, p]) => {
+            if (id !== vesselId && p.isOpen()) p.remove();
+          });
+        });
 
         // Initial popup content including wind data if available
         const firstPoint = trackData[0];

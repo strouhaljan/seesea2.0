@@ -13,17 +13,11 @@ export function generateVesselPopupHTML(
     ? `<span class="highlight-toggle" data-vessel-id="${vesselId}" style="${starStyle}" title="Remove highlight">&#9733;</span>`
     : `<span class="highlight-toggle" data-vessel-id="${vesselId}" style="${starStyle} opacity:0.4;" title="Highlight crew">&#9734;</span>`;
 
-  return `<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
-          <strong>Vessel ID: ${vesselId}${star}</strong>
+  const title = crewDescription || vesselId;
+
+  return `<div style="border-left: 4px solid ${vesselColor}; padding-left: 12px; margin-left: -15px; padding-top: 4px; padding-bottom: 4px;">
+          <strong>${title}${star}</strong>
           <table class="vessel-data">
-          ${
-            crewDescription
-              ? `<tr>
-              <td>Crew:</td>
-              <td>${crewDescription}</td>
-            </tr>`
-              : ""
-          }
             <tr>
               <td>Speed:</td>
               <td>${data.sog?.toFixed(1) || "?"} knots</td>
