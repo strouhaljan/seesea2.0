@@ -7,7 +7,7 @@ import { Feature, Point, GeoJSON } from "geojson";
 import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
-import { crewList } from "../crewList";
+import { useEventConfig } from "../hooks/useEventConfig";
 import { generateVesselPopupHTML } from "../utils/popupContent";
 import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "../utils/mapConfig";
 
@@ -62,6 +62,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const markersRef = useRef<Record<string, Marker>>({});
   const [showWindHeatmap, setShowWindHeatmap] = useState(false);
   const rootsRef = useRef<Record<string, Root>>({});
+  const { crews } = useEventConfig();
 
   // Initialize map on component mount
   useEffect(() => {
@@ -266,7 +267,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
         rootsRef.current[vesselId].render(
           <BoatIcon
-            crewId={parseInt(vesselId)}
+            highlight={!!crews.find((c) => c.id === parseInt(vesselId))?.highlight}
             color={generateColorFromId(vesselId)}
             width={24}
             height={10}
@@ -286,7 +287,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
           vesselId,
           data,
           vesselColor,
-          crewList.find((crew) => crew.id === parseInt(vesselId))?.description,
+          crews.find((crew) => crew.id === parseInt(vesselId))?.description,
         ));
       } else {
         // Create new marker
@@ -302,7 +303,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
         root.render(
           <BoatIcon
-            crewId={parseInt(vesselId)}
+            highlight={!!crews.find((c) => c.id === parseInt(vesselId))?.highlight}
             color={generateColorFromId(vesselId)}
             width={24}
             height={10}
@@ -329,7 +330,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             vesselId,
             data,
             vesselColor,
-            crewList.find((crew) => crew.id === parseInt(vesselId))?.description,
+            crews.find((crew) => crew.id === parseInt(vesselId))?.description,
           ));
 
         // Create the marker
