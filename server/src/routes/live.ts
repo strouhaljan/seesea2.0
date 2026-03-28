@@ -6,7 +6,7 @@ const router = Router();
 
 router.get("/:eventId", async (req, res) => {
   const { eventId } = req.params;
-  const url = `https://app.seesea.cz/cc_event/${eventId}/data/live`;
+  const url = `https://app.seesea.cz/api/cc_event/${eventId}/data/live`;
 
   try {
     const response = await fetch(url);
