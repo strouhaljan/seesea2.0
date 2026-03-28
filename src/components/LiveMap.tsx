@@ -48,6 +48,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
   );
   const rootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
+  const [mapRotated, setMapRotated] = useState(false);
   const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
 
@@ -99,6 +100,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
     map.current.on("click", () => {
       onClearActive();
     });
+
+    const onMoveEnd = () => {
+      if (!map.current) return;
+      const bearing = map.current.getBearing();
+      const pitch = map.current.getPitch();
+      setMapRotated(Math.abs(bearing) > 0.5 || pitch > 0.5);
+    };
+    map.current.on("moveend", onMoveEnd);
+    map.current.on("pitchend", onMoveEnd);
 
     return () => {
       // Clean up all React roots
@@ -293,18 +303,20 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
       <div ref={mapContainer} className="map-container" />
 
       <div className="controls-stack">
-        <button
-          className="map-reset-btn"
-          title="Reset north &amp; tilt"
-          onClick={() => {
-            map.current?.easeTo({ bearing: 0, pitch: 0, duration: 400 });
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18">
-            <polygon points="9,1 12,8 9,6.5 6,8" fill="#e55" />
-            <polygon points="9,17 6,10 9,11.5 12,10" fill="#ccc" />
-          </svg>
-        </button>
+        {mapRotated && (
+          <button
+            className="map-reset-btn"
+            title="Reset north &amp; tilt"
+            onClick={() => {
+              map.current?.easeTo({ bearing: 0, pitch: 0, duration: 400 });
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <polygon points="9,1 12,8 9,6.5 6,8" fill="#e55" />
+              <polygon points="9,17 6,10 9,11.5 12,10" fill="#ccc" />
+            </svg>
+          </button>
+        )}
 
         <div className="controls-panel">
           <div className="controls-panel__row">
