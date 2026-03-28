@@ -7,9 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5173:5173"
-    volumes:
-      - ./src:/app/src
-      - ./public:/app/public
     environment:
       - NODE_ENV=development
 
@@ -20,7 +17,10 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ./public:/app/public
+      - server-data:/app/data
     environment:
       - PORT=3001
-      - HISTORY_DATA_PATH=/app/public/data.json
+      - HISTORY_DATA_PATH=/app/data/data.json
+
+volumes:
+  server-data:
