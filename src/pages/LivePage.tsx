@@ -20,7 +20,8 @@ export const LivePage = () => {
       try {
         setLoading(true);
         // Fetch live data from the API
-        const response = await fetch("/api/cc_event/201606/data/live");
+        const eventId = import.meta.env.VITE_EVENT_ID || "201606";
+        const response = await fetch(`/api/cc_event/${eventId}/data/live`);
 
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
