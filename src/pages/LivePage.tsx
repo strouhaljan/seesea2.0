@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import LiveMap from "../components/LiveMap";
 import { usePolling } from "../hooks/usePolling";
+import { useEventConfig } from "../hooks/useEventConfig";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -13,12 +14,14 @@ export const LivePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const { eventId } = useEventConfig();
 
   const fetchLiveData = useCallback(async () => {
+    if (!eventId) return;
+
     try {
       setLoading(true);
-      const eventId = import.meta.env.VITE_EVENT_ID || "201606";
-      const response = await fetch(`/api/cc_event/${eventId}/data/live`);
+      const response = await fetch(`/api/live/${eventId}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -54,7 +57,7 @@ export const LivePage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [eventId]);
 
   const { errorCount, currentInterval, retryNow } = usePolling(fetchLiveData, {
     interval: 10000,

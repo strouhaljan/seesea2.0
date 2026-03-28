@@ -1,8 +1,15 @@
 import { Outlet, Link } from "@tanstack/react-router";
 import "./App.css";
+import {
+  EventConfigContext,
+  useEventConfigLoader,
+} from "./hooks/useEventConfig";
 
 function App() {
+  const eventConfig = useEventConfigLoader();
+
   return (
+    <EventConfigContext.Provider value={eventConfig}>
     <div className="app-container">
       <header
         style={{
@@ -33,6 +40,7 @@ function App() {
         <Outlet />
       </main>
     </div>
+    </EventConfigContext.Provider>
   );
 }
 
