@@ -18,6 +18,6 @@ export default defineConfig({
     hmr: {
       clientPort: 443,
     },
-    allowedHosts: ["clvpwr.dev"],
+    allowedHosts: ["clvpwr.dev", "seesea.tlkt.me"],
   },
 });
