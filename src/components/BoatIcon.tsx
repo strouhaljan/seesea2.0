@@ -32,9 +32,6 @@ const BoatIcon: React.FC<BoatIconProps> = ({
   opacity = 1,
   label,
 }) => {
-  if (!rotation) {
-    return null;
-  }
   // Format wind speed to one decimal place if available
   const formattedWindSpeed =
     windSpeed != null ? windSpeed.toFixed(1) : "";
