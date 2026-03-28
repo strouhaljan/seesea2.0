@@ -6,6 +6,7 @@ import type { ColorMode } from "./LiveMap";
 interface BoatIconProps {
   highlight?: boolean;
   isOurs?: boolean;
+  selected?: boolean;
   color?: string;
   colorMode?: ColorMode;
   rotation?: number;
@@ -18,6 +19,7 @@ interface BoatIconProps {
 const BoatIcon: React.FC<BoatIconProps> = ({
   highlight = false,
   isOurs = false,
+  selected = false,
   color = "#392ABF",
   colorMode = "seesea",
   rotation = 0,
@@ -43,7 +45,12 @@ const BoatIcon: React.FC<BoatIconProps> = ({
     colorMode === "wind" ? (getColorBySpeed(windSpeed) ?? color) : color;
 
   return (
-    <div style={{ position: "relative" }}>
+    <div
+      style={{
+        position: "relative",
+        filter: selected ? "drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px rgba(255,255,255,0.5))" : "none",
+      }}
+    >
       <svg
         width={24}
         height={24}

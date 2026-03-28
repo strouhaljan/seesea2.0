@@ -1,16 +1,27 @@
+export const WIND_SPEED_COLORS = [
+  { threshold: 0, color: "#4a6a7a" },
+  { threshold: 5, color: "#00bfff" },
+  { threshold: 10, color: "#0080ff" },
+  { threshold: 15, color: "#00ff80" },
+  { threshold: 20, color: "#00c000" },
+  { threshold: 25, color: "#ffd700" },
+  { threshold: 30, color: "#ff8c00" },
+  { threshold: 35, color: "#ff4500" },
+  { threshold: Infinity, color: "#ff0000" },
+];
+
 export const getColorBySpeed = (windSpeed?: number): string => {
-  if (!windSpeed || windSpeed <= 0) return "#000000"; // Black for no wind
+  if (!windSpeed || windSpeed <= 0) return WIND_SPEED_COLORS[0].color;
 
-  if (windSpeed < 5) return "#00bfff"; // Light blue for light wind
-  if (windSpeed < 10) return "#0080ff"; // Medium blue for moderate wind
-  if (windSpeed < 15) return "#00ff80"; // Light green
-  if (windSpeed < 20) return "#00c000"; // Medium green
-  if (windSpeed < 25) return "#ffd700"; // Yellow
-  if (windSpeed < 30) return "#ff8c00"; // Orange
-  if (windSpeed < 35) return "#ff4500"; // Orange-red
-
-  return "#ff0000"; // Red for strong wind
+  for (let i = WIND_SPEED_COLORS.length - 1; i >= 0; i--) {
+    if (windSpeed >= WIND_SPEED_COLORS[i].threshold) {
+      return WIND_SPEED_COLORS[i].color;
+    }
+  }
+  return WIND_SPEED_COLORS[0].color;
 };
+
+export const kmhToKnots = (kmh: number): number => kmh * 0.539957;
 
 export const getDirection = (heading: number, windDirection: number) => {
   if (

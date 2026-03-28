@@ -8,18 +8,22 @@ interface BoatPanelProps {
   crews: Crew[];
   vesselsData: Record<string, VesselDataPoint>;
   selectedBoatIds: Set<number>;
+  activeBoatId: number | null;
   onDismiss: (boatId: number) => void;
   onDismissAll: () => void;
   onFocusBoat: (boatId: number) => void;
+  onActivate: (boatId: number) => void;
 }
 
 const BoatPanel = ({
   crews,
   vesselsData,
   selectedBoatIds,
+  activeBoatId,
   onDismiss,
   onDismissAll,
   onFocusBoat,
+  onActivate,
 }: BoatPanelProps) => {
   const { highlightedCrews, toggleHighlight } = useEventConfig();
   const [hidden, setHidden] = useState(false);
@@ -61,10 +65,10 @@ const BoatPanel = ({
         return (
           <div
             key={crew.id}
-            className={`boat-card ${isOurs ? "boat-card--ours" : ""}`}
+            className={`boat-card ${isOurs ? "boat-card--ours" : ""} ${crew.id === activeBoatId ? "boat-card--active" : ""}`}
             style={{ borderLeftColor: crew.track_color }}
           >
-            <div className="boat-card__body" onClick={() => onFocusBoat(crew.id)}>
+            <div className="boat-card__body" onClick={() => { onActivate(crew.id); onFocusBoat(crew.id); }}>
               <div className="boat-card__header">
                 <span
                   className="boat-card__dot"
