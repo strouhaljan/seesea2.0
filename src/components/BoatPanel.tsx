@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import { Crew, useEventConfig } from "../hooks/useEventConfig";
 import { getColorBySpeed } from "../utils/wind";
@@ -26,7 +26,13 @@ const BoatPanel = ({
   onActivate,
 }: BoatPanelProps) => {
   const { highlightedCrews, toggleHighlight } = useEventConfig();
-  const [hidden, setHidden] = useState(false);
+  const [hidden, setHidden] = useState(
+    () => localStorage.getItem("boatPanelHidden") === "true"
+  );
+
+  useEffect(() => {
+    localStorage.setItem("boatPanelHidden", String(hidden));
+  }, [hidden]);
 
   if (selectedBoatIds.size === 0) return null;
 
