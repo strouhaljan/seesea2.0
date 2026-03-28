@@ -31,15 +31,45 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const markersRef = useRef<Record<string, Marker>>({});
-  const [colorMode, setColorMode] = useState<ColorMode>("seesea");
-  const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(false);
-  const [showWind, setShowWind] = useState(false);
-  const [windModel, setWindModel] = useState<WindModel>("icon_2i");
-  const [blendBoats, setBlendBoats] = useState(false);
+  const [colorMode, setColorMode] = useState<ColorMode>(
+    () => (localStorage.getItem("colorMode") as ColorMode) || "seesea"
+  );
+  const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(
+    () => localStorage.getItem("showOnlyHighlighted") === "true"
+  );
+  const [showWind, setShowWind] = useState(
+    () => localStorage.getItem("showWind") === "true"
+  );
+  const [windModel, setWindModel] = useState<WindModel>(
+    () => (localStorage.getItem("windModel") as WindModel) || "icon_2i"
+  );
+  const [blendBoats, setBlendBoats] = useState(
+    () => localStorage.getItem("blendBoats") === "true"
+  );
   const rootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
   const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
+
+  useEffect(() => {
+    localStorage.setItem("colorMode", colorMode);
+  }, [colorMode]);
+
+  useEffect(() => {
+    localStorage.setItem("showOnlyHighlighted", String(showOnlyHighlighted));
+  }, [showOnlyHighlighted]);
+
+  useEffect(() => {
+    localStorage.setItem("showWind", String(showWind));
+  }, [showWind]);
+
+  useEffect(() => {
+    localStorage.setItem("windModel", windModel);
+  }, [windModel]);
+
+  useEffect(() => {
+    localStorage.setItem("blendBoats", String(blendBoats));
+  }, [blendBoats]);
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
