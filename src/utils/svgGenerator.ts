@@ -61,34 +61,3 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-/**
- * Generates an SVG sailboat icon from top view with custom color
- * @param id Object ID to base color on
- * @param rotation Rotation angle in degrees
- * @returns SVG string
- */
-export function generateSailboatSvg(id: string, rotation: number = 0): string {
-  const color = generateColorFromId(id);
-
-  // Simplified boat shape from top view (just hull)
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
-<g transform="rotate(${rotation}, 50, 50)">
-<path d="M 35,35 L 65,35 L 75,50 L 65,65 L 35,65 L 25,50 Z" fill="${color}" stroke="#000" stroke-width="2"/>
-<circle cx="50" cy="50" r="3" fill="#333"/>
-</g>
-</svg>`.trim();
-}
-
-/**
- * Creates a data URL from SVG content
- * @param svgContent SVG string
- * @returns Data URL for use in image src
- */
-export function svgToDataUrl(svgContent: string): string {
-  // Double-check that we're properly encoding
-  const encoded = encodeURIComponent(svgContent)
-    .replace(/'/g, "%27")
-    .replace(/"/g, "%22");
-
-  return `data:image/svg+xml;charset=utf-8,${encoded}`;
-}

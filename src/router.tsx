@@ -1,35 +1,17 @@
-import {
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
-import App from "./App";
-import { HistoryPage } from "./pages/HistoryPage";
-import { LivePage } from "./pages/LivePage";
+import { useState, useEffect } from "react";
 
-export const rootRoute = createRootRoute({
-  component: App,
-});
+function getRoute(): string {
+  const hash = window.location.hash;
+  if (hash.startsWith("#/history")) return "history";
+  return "live";
+}
 
-export const livePageRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/",
-  component: LivePage,
-});
-
-export const historyPageRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/history",
-  component: HistoryPage,
-});
-
-export const router = createRouter({
-  routeTree: rootRoute.addChildren([livePageRoute, historyPageRoute]),
-});
-
-// Declare the router types
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router;
-  }
+export function useRoute() {
+  const [route, setRoute] = useState(getRoute);
+  useEffect(() => {
+    const handler = () => setRoute(getRoute());
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+  return route;
 }

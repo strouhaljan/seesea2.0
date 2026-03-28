@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, createElement } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
@@ -146,9 +146,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         root.render(
           <BoatIcon
             highlight={highlightedCrews.has(parseInt(vesselId))}
-            color={generateColorFromId(vesselId)}
-            width={24}
-            height={10}
+
             rotation={0}
           />,
         );
@@ -223,9 +221,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         rootsRef.current[vesselId].render(
           <BoatIcon
             highlight={highlightedCrews.has(parseInt(vesselId))}
-            color={generateColorFromId(vesselId)}
-            width={24}
-            height={10}
+
             rotation={rotation}
             windDirection={currentPoint.twa}
             windSpeed={currentPoint.tws}

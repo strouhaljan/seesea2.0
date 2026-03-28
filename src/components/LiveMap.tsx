@@ -287,12 +287,9 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         rootsRef.current[vesselId].render(
           <BoatIcon
             highlight={highlightedCrews.has(parseInt(vesselId))}
-            color={generateColorFromId(vesselId)}
-            width={24}
-            height={10}
+
             rotation={rotation}
             windDirection={data.twa}
-            heading={data.hdg}
             windSpeed={data.tws}
             showWindArrow={
               data.twa !== undefined && data.tws !== undefined && data.tws > 0
@@ -324,11 +321,8 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         root.render(
           <BoatIcon
             highlight={highlightedCrews.has(parseInt(vesselId))}
-            color={generateColorFromId(vesselId)}
-            width={24}
-            height={10}
+
             rotation={rotation}
-            heading={data.hdg}
             windDirection={data.twa}
             windSpeed={data.tws}
             showWindArrow={

@@ -4,30 +4,20 @@ import { getDirection, getColorBySpeed } from "../utils/wind";
 
 interface BoatIconProps {
   highlight?: boolean;
-  color?: string;
-  width?: number;
-  height?: number;
   rotation?: number;
   className?: string;
   windDirection?: number;
   windSpeed?: number;
   showWindArrow?: boolean;
-  windArrowColor?: string;
-  heading?: number;
 }
 
 const BoatIcon: React.FC<BoatIconProps> = ({
   highlight = false,
-  color = "#392ABF",
-  width = 23,
-  height = 10,
   rotation = 0,
   className = "",
   windDirection,
   windSpeed,
   showWindArrow = false,
-  windArrowColor = "#000000",
-  heading,
 }) => {
   if (!rotation) {
     return null;
