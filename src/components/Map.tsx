@@ -8,6 +8,7 @@ import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "../utils/mapConfig";
 import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
+import { useEventConfig } from "../hooks/useEventConfig";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -24,6 +25,9 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
   const rootsRef = useRef<Record<string, Root>>({});
   const routeLinesRef = useRef<string[]>([]);
   const popupsRef = useRef<Record<string, mapboxgl.Popup>>({});
+  const { highlightedCrews, toggleHighlight } = useEventConfig();
+  const toggleHighlightRef = useRef(toggleHighlight);
+  toggleHighlightRef.current = toggleHighlight;
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -39,7 +43,20 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
       setMapLoaded(true);
     });
 
+    const handlePopupClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains("highlight-toggle")) {
+        const vesselId = target.dataset.vesselId;
+        if (vesselId) {
+          toggleHighlightRef.current(parseInt(vesselId));
+        }
+      }
+    };
+    mapContainer.current.addEventListener("click", handlePopupClick);
+
+    const container = mapContainer.current;
     return () => {
+      container.removeEventListener("click", handlePopupClick);
       map.current?.remove();
     };
   }, []);
@@ -128,6 +145,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
         root.render(
           <BoatIcon
+            highlight={highlightedCrews.has(parseInt(vesselId))}
             color={generateColorFromId(vesselId)}
             width={24}
             height={10}
@@ -204,6 +222,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
         rootsRef.current[vesselId].render(
           <BoatIcon
+            highlight={highlightedCrews.has(parseInt(vesselId))}
             color={generateColorFromId(vesselId)}
             width={24}
             height={10}
@@ -231,7 +250,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         }
       }
     });
-  }, [currentPointIndex, vesselsData]);
+  }, [currentPointIndex, vesselsData, highlightedCrews]);
 
   return <div ref={mapContainer} className="map-container" />;
 };
