@@ -328,6 +328,25 @@ main {
   font-size: 11px;
 }
 
+.controls-panel__row--column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.future-slider {
+  width: 100%;
+  accent-color: #4a9eff;
+  cursor: pointer;
+}
+
+.future-slider__ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #999;
+  padding: 0 2px;
+}
+
 /* Boat side panel */
 .boat-panel {
   position: absolute;

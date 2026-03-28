@@ -15,7 +15,9 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 export type ColorMode = "seesea" | "wind";
 
-const FUTURE_INTERVALS = [15, 30, 45, 60]; // minutes
+const FUTURE_STEPS = [15, 30, 45, 60]; // slider tick values in minutes
+const FUTURE_LINE_SOURCE = "future-position-lines";
+const FUTURE_LINE_LAYER = "future-position-lines-layer";
 
 /** Calculate a future position given current coords, speed (knots), and course (degrees from north). */
 function futurePosition(
@@ -63,12 +65,12 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
   const [blendBoats, setBlendBoats] = useState(
     () => localStorage.getItem("blendBoats") === "true"
   );
-  const [showFuturePositions, setShowFuturePositions] = useState(
-    () => localStorage.getItem("showFuturePositions") === "true"
+  const [futureMinutes, setFutureMinutes] = useState(
+    () => parseInt(localStorage.getItem("futureMinutes") || "0", 10)
   );
   const rootsRef = useRef<Record<string, Root>>({});
-  const futureMarkersRef = useRef<Record<string, Marker[]>>({});
-  const futureRootsRef = useRef<Record<string, Root[]>>({});
+  const futureMarkersRef = useRef<Record<string, Marker>>({});
+  const futureRootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
   const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
@@ -94,8 +96,8 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
   }, [blendBoats]);
 
   useEffect(() => {
-    localStorage.setItem("showFuturePositions", String(showFuturePositions));
-  }, [showFuturePositions]);
+    localStorage.setItem("futureMinutes", String(futureMinutes));
+  }, [futureMinutes]);
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
@@ -131,7 +133,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
       Object.values(rootsRef.current).forEach((root) => {
         try { root.unmount(); } catch (e) { console.error("Error unmounting React root:", e); }
       });
-      Object.values(futureRootsRef.current).flat().forEach((root) => {
+      Object.values(futureRootsRef.current).forEach((root) => {
         try { root.unmount(); } catch (e) { /* ignore */ }
       });
 
@@ -301,16 +303,19 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
       }
     });
 
-    // --- Future position markers ---
-    // Remove all existing future markers first
-    Object.values(futureMarkersRef.current).flat().forEach((m) => m.remove());
-    Object.values(futureRootsRef.current).flat().forEach((r) => {
+    // --- Future position markers & path lines ---
+    // Clean up existing future markers
+    Object.values(futureMarkersRef.current).forEach((m) => m.remove());
+    Object.values(futureRootsRef.current).forEach((r) => {
       try { r.unmount(); } catch (_) { /* ignore */ }
     });
     futureMarkersRef.current = {};
     futureRootsRef.current = {};
 
-    if (showFuturePositions) {
+    // Build GeoJSON lines for all vessels
+    const lineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+
+    if (futureMinutes > 0) {
       Object.entries(vesselsData).forEach(([vesselId, data]) => {
         if (!data.coords || !data.sog || data.sog <= 0) return;
 
@@ -322,50 +327,71 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
         if (!shouldShow) return;
 
         const crew = crews.find((c) => c.id === parseInt(vesselId));
-        const markers: Marker[] = [];
-        const roots: Root[] = [];
+        const coords = data.coords as [number, number];
+        const futureCoords = futurePosition(coords, data.sog, cog, futureMinutes);
 
-        FUTURE_INTERVALS.forEach((minutes, idx) => {
-          const futureCoords = futurePosition(
-            data.coords as [number, number],
-            data.sog,
-            cog,
-            minutes,
-          );
-
-          const el = document.createElement("div");
-          el.className = "vessel-marker vessel-marker--future";
-          el.style.width = "24px";
-          el.style.height = "35px";
-          el.style.pointerEvents = "none";
-
-          const opacity = 0.6 - idx * 0.12; // 0.6, 0.48, 0.36, 0.24
-          const root = createRoot(el);
-          roots.push(root);
-
-          root.render(
-            <BoatIcon
-              color={crew?.track_color}
-              colorMode={colorMode}
-              rotation={data.hdg || data.cog || 0}
-              opacity={opacity}
-              label={`${minutes}m`}
-            />,
-          );
-
-          const marker = new mapboxgl.Marker({
-            element: el,
-            anchor: "center",
-            rotationAlignment: "map",
-          })
-            .setLngLat(futureCoords)
-            .addTo(map.current!);
-
-          markers.push(marker);
+        // Path line from current to future position
+        lineFeatures.push({
+          type: "Feature",
+          properties: { color: crew?.track_color || "#888" },
+          geometry: {
+            type: "LineString",
+            coordinates: [coords, futureCoords],
+          },
         });
 
-        futureMarkersRef.current[vesselId] = markers;
-        futureRootsRef.current[vesselId] = roots;
+        // Ghost marker at future position
+        const el = document.createElement("div");
+        el.className = "vessel-marker vessel-marker--future";
+        el.style.width = "24px";
+        el.style.height = "35px";
+        el.style.pointerEvents = "none";
+
+        const root = createRoot(el);
+        futureRootsRef.current[vesselId] = root;
+
+        root.render(
+          <BoatIcon
+            color={crew?.track_color}
+            colorMode={colorMode}
+            rotation={data.hdg || data.cog || 0}
+            opacity={0.5}
+            label={`${futureMinutes}m`}
+          />,
+        );
+
+        const marker = new mapboxgl.Marker({
+          element: el,
+          anchor: "center",
+          rotationAlignment: "map",
+        })
+          .setLngLat(futureCoords)
+          .addTo(map.current!);
+
+        futureMarkersRef.current[vesselId] = marker;
+      });
+    }
+
+    // Update or create the GeoJSON line source/layer
+    const geojsonData: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
+      type: "FeatureCollection",
+      features: lineFeatures,
+    };
+    const existingSource = map.current.getSource(FUTURE_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+    if (existingSource) {
+      existingSource.setData(geojsonData);
+    } else {
+      map.current.addSource(FUTURE_LINE_SOURCE, { type: "geojson", data: geojsonData });
+      map.current.addLayer({
+        id: FUTURE_LINE_LAYER,
+        type: "line",
+        source: FUTURE_LINE_SOURCE,
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 2,
+          "line-dasharray": [4, 4],
+          "line-opacity": 0.6,
+        },
       });
     }
 
@@ -379,7 +405,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, showFuturePositions]);
+  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes]);
 
   return (
     <div className="map-wrapper">
@@ -409,16 +435,25 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
             <span className="toggle-switch__slider" />
           </label>
         </div>
-        <div className="controls-panel__row">
-          <span className="controls-panel__label">Future positions</span>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={showFuturePositions}
-              onChange={() => setShowFuturePositions((prev) => !prev)}
-            />
-            <span className="toggle-switch__slider" />
-          </label>
+        <div className="controls-panel__row controls-panel__row--column">
+          <span className="controls-panel__label">
+            Future position{futureMinutes > 0 ? `: ${futureMinutes} min` : ""}
+          </span>
+          <input
+            type="range"
+            className="future-slider"
+            min={0}
+            max={60}
+            step={15}
+            value={futureMinutes}
+            onChange={(e) => setFutureMinutes(parseInt(e.target.value, 10))}
+          />
+          <div className="future-slider__ticks">
+            <span>Off</span>
+            {FUTURE_STEPS.map((m) => (
+              <span key={m}>{m}m</span>
+            ))}
+          </div>
         </div>
         <div className="controls-panel__divider" />
         <div className="controls-panel__row">
