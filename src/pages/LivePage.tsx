@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import LiveMap, { LiveMapHandle } from "../components/LiveMap";
 import BoatPanel from "../components/BoatPanel";
 import { usePolling } from "../hooks/usePolling";
 import { useEventConfig } from "../hooks/useEventConfig";
+import { useTails } from "../hooks/useTails";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -29,9 +30,21 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const { eventId, crews } = useEventConfig();
+  const { eventId, crews, legs } = useEventConfig();
   const mapRef = useRef<LiveMapHandle>(null);
 
+  // Pick the current active leg for tails (last active leg by start date)
+  const activeLegId = useMemo(() => {
+    const active = legs.filter((l) => l.active === 1);
+    if (active.length === 0) return null;
+    const now = Date.now();
+    const current = active.find(
+      (l) => new Date(l.start).getTime() <= now && new Date(l.end).getTime() >= now,
+    );
+    return (current ?? active[0]).id;
+  }, [legs]);
+
+  const { tails, trackLengthMax } = useTails(eventId, activeLegId);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
 
   const handleBoatClick = useCallback((boatId: number) => {
@@ -151,6 +164,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
         <LiveMap
           ref={mapRef}
           vesselsData={liveData}
+          tails={tails}
+          trackLengthMax={trackLengthMax}
           activeBoatId={activeBoatId}
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}

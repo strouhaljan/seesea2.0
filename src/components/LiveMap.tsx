@@ -10,6 +10,7 @@ import { MAP_STYLE, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID } f
 import { OUR_BOAT } from "../config";
 import { WindOverlay } from "./WindOverlay";
 import { fetchWindGrid, blendBoatData, WindModel } from "../utils/windGrid";
+import { TailsData } from "../hooks/useTails";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -18,6 +19,9 @@ export type ColorMode = "seesea" | "wind";
 const FUTURE_STEPS = [15, 30, 45, 60]; // slider tick values in minutes
 const FUTURE_LINE_SOURCE = "future-position-lines";
 const FUTURE_LINE_LAYER = "future-position-lines-layer";
+const TAIL_LINE_SOURCE = "tail-lines";
+const TAIL_LINE_LAYER = "tail-lines-layer";
+const TRAIL_STEPS = [15, 30, 60, 120, 180]; // minutes
 
 /** Calculate a future position given current coords, speed (knots), and course (degrees from north). */
 function futurePosition(
@@ -40,12 +44,14 @@ export interface LiveMapHandle {
 
 interface LiveMapProps {
   vesselsData: Record<string, VesselDataPoint>;
+  tails: TailsData;
+  trackLengthMax: number;
   activeBoatId: number | null;
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBoatId, onBoatClick, onClearActive }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -67,6 +73,9 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
   );
   const [futureMinutes, setFutureMinutes] = useState(
     () => parseInt(localStorage.getItem("futureMinutes") || "0", 10)
+  );
+  const [trailMinutes, setTrailMinutes] = useState(
+    () => parseInt(localStorage.getItem("trailMinutes") || "0", 10)
   );
   const rootsRef = useRef<Record<string, Root>>({});
   const futureMarkersRef = useRef<Record<string, Marker>>({});
@@ -99,6 +108,10 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
   useEffect(() => {
     localStorage.setItem("futureMinutes", String(futureMinutes));
   }, [futureMinutes]);
+
+  useEffect(() => {
+    localStorage.setItem("trailMinutes", String(trailMinutes));
+  }, [trailMinutes]);
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
@@ -405,6 +418,53 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
       });
     }
 
+    // --- Tail trail lines ---
+    const tailFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+
+    if (trailMinutes > 0 && Object.keys(tails).length > 0) {
+      const cutoff = Date.now() / 1000 - trailMinutes * 60;
+      Object.entries(tails).forEach(([vesselId, points]) => {
+        const isHighlighted = highlightedCrews.has(parseInt(vesselId));
+        const shouldShow = !showOnlyHighlighted || isHighlighted;
+        if (!shouldShow) return;
+
+        // Filter points within the time window
+        const filtered = points.filter((p) => p[0] >= cutoff);
+        if (filtered.length < 2) return;
+
+        const crew = crews.find((c) => c.id === parseInt(vesselId));
+        // API returns [timestamp, lng, lat] — MapBox needs [lng, lat]
+        const coords: [number, number][] = filtered.map((p) => [p[1], p[2]]);
+
+        tailFeatures.push({
+          type: "Feature",
+          properties: { color: crew?.track_color || "#888" },
+          geometry: { type: "LineString", coordinates: coords },
+        });
+      });
+    }
+
+    const tailGeojson: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
+      type: "FeatureCollection",
+      features: tailFeatures,
+    };
+    const existingTailSource = map.current.getSource(TAIL_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+    if (existingTailSource) {
+      existingTailSource.setData(tailGeojson);
+    } else {
+      map.current.addSource(TAIL_LINE_SOURCE, { type: "geojson", data: tailGeojson });
+      map.current.addLayer({
+        id: TAIL_LINE_LAYER,
+        type: "line",
+        source: TAIL_LINE_SOURCE,
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 2,
+          "line-opacity": 0.7,
+        },
+      });
+    }
+
     // Center on target vessel on first load with data
     if (!hasCenteredRef.current && Object.keys(markersRef.current).length > 0) {
       hasCenteredRef.current = true;
@@ -415,7 +475,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes]);
+  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes]);
 
   return (
     <div className="map-wrapper">
@@ -478,6 +538,26 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
             <span>Off</span>
             {FUTURE_STEPS.map((m) => (
               <span key={m}>{m}m</span>
+            ))}
+          </div>
+        </div>
+        <div className="controls-panel__row controls-panel__row--column">
+          <span className="controls-panel__label">
+            Trail{trailMinutes > 0 ? `: ${trailMinutes >= 60 ? `${trailMinutes / 60}h` : `${trailMinutes} min`}` : ""}
+          </span>
+          <input
+            type="range"
+            className="future-slider"
+            min={0}
+            max={trackLengthMax / 60}
+            step={15}
+            value={trailMinutes}
+            onChange={(e) => setTrailMinutes(parseInt(e.target.value, 10))}
+          />
+          <div className="future-slider__ticks">
+            <span>Off</span>
+            {TRAIL_STEPS.filter((m) => m <= trackLengthMax / 60).map((m) => (
+              <span key={m}>{m >= 60 ? `${m / 60}h` : `${m}m`}</span>
             ))}
           </div>
         </div>
