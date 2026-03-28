@@ -194,7 +194,15 @@ main {
   padding-right: 8px;
 }
 
-/* Wind heatmap toggle button */
+/* Map toggle controls container */
+.map-toggle-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+/* Map toggle button */
 .wind-toggle-btn {
   width: 36px !important;
   height: 36px !important;
