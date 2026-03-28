@@ -1,80 +1,50 @@
 import { useEffect, useState } from "react";
 import { TripData } from "../types/tripData";
 
-interface HistoryMetadata {
-  timeRange: { from: number; to: number };
-  vesselIds: string[];
-  totalPoints: number;
-}
-
 interface HistoryDataResult {
-  metadata: HistoryMetadata | null;
   tripData: TripData | null;
   allTimestamps: number[];
   isLoading: boolean;
-  loadingProgress: number;
   error: string | null;
 }
 
-export function useHistoryData(): HistoryDataResult {
+export function useHistoryData(eventId: number | null): HistoryDataResult {
   const [tripData, setTripData] = useState<TripData | null>(null);
-  const [metadata, setMetadata] = useState<HistoryMetadata | null>(null);
   const [allTimestamps, setAllTimestamps] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!eventId) return;
+
     const controller = new AbortController();
 
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        setLoadingProgress(0);
 
-        const response = await fetch("/data.json", {
+        // First fetch metadata to get time range
+        const metaRes = await fetch(`/api/history/${eventId}`, {
           signal: controller.signal,
         });
+        if (!metaRes.ok) throw new Error(`HTTP error! Status: ${metaRes.status}`);
+        const meta = await metaRes.json();
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
+        // Then fetch full data using the time range
+        const dataRes = await fetch(
+          `/api/history/${eventId}?from=${meta.timeRange.from}&to=${meta.timeRange.to}`,
+          { signal: controller.signal },
+        );
+        if (!dataRes.ok) throw new Error(`HTTP error! Status: ${dataRes.status}`);
+        const data = await dataRes.json();
 
-        const contentLength = response.headers.get("content-length");
-        const totalBytes = contentLength ? parseInt(contentLength, 10) : null;
+        setTripData(data);
 
-        if (!response.body || !totalBytes) {
-          // Fallback: no streaming progress available
-          const data = await response.json();
-          processData(data);
-          return;
-        }
-
-        // Stream the response to track download progress
-        const reader = response.body.getReader();
-        const chunks: Uint8Array[] = [];
-        let receivedBytes = 0;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          chunks.push(value);
-          receivedBytes += value.length;
-          setLoadingProgress(receivedBytes / totalBytes);
-        }
-
-        // Combine chunks and parse JSON
-        const allChunks = new Uint8Array(receivedBytes);
-        let position = 0;
-        for (const chunk of chunks) {
-          allChunks.set(chunk, position);
-          position += chunk.length;
-        }
-
-        const text = new TextDecoder().decode(allChunks);
-        const data = JSON.parse(text);
-        processData(data);
+        // Derive timestamps from first vessel's points
+        const vesselIds = Object.keys(data.objects);
+        const firstVesselData =
+          vesselIds.length > 0 ? data.objects[vesselIds[0]] : [];
+        setAllTimestamps(firstVesselData.map((point: { time: number }) => point.time));
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         const message =
@@ -86,40 +56,15 @@ export function useHistoryData(): HistoryDataResult {
       }
     };
 
-    const processData = (data: TripData) => {
-      setTripData(data);
-
-      const vesselIds = Object.keys(data.objects);
-      const firstVesselData = vesselIds.length > 0 ? data.objects[vesselIds[0]] : [];
-      const timestamps = firstVesselData.map((point) => point.time);
-
-      const totalPoints = Object.values(data.objects).reduce(
-        (sum, points) => sum + points.length,
-        0,
-      );
-
-      setAllTimestamps(timestamps);
-      setMetadata({
-        timeRange: {
-          from: timestamps.length > 0 ? timestamps[0] : 0,
-          to: timestamps.length > 0 ? timestamps[timestamps.length - 1] : 0,
-        },
-        vesselIds,
-        totalPoints,
-      });
-    };
-
     fetchData();
 
     return () => controller.abort();
-  }, []);
+  }, [eventId]);
 
   return {
-    metadata,
     tripData,
     allTimestamps,
     isLoading,
-    loadingProgress,
     error,
   };
 }

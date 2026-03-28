@@ -3,18 +3,16 @@ import "../App.css";
 import Map from "../components/Map";
 import TimeSlider from "../components/TimeSlider";
 import { useHistoryData } from "../hooks/useHistoryData";
+import { useEventConfig } from "../hooks/useEventConfig";
 
 export const HistoryPage = () => {
-  const { tripData, allTimestamps, isLoading, loadingProgress, error } =
-    useHistoryData();
+  const { eventId } = useEventConfig();
+  const { tripData, allTimestamps, isLoading, error } =
+    useHistoryData(eventId);
   const [currentPointIndex, setCurrentPointIndex] = useState(0);
 
   if (isLoading) {
-    return (
-      <div className="loading">
-        Loading history data... {Math.round(loadingProgress * 100)}%
-      </div>
-    );
+    return <div className="loading">Loading history data...</div>;
   }
 
   if (error) {
