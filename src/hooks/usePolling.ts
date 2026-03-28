@@ -8,7 +8,7 @@ interface UsePollingOptions {
 
 interface UsePollingReturn {
   errorCount: number;
-  currentInterval: number;
+  secondsUntilRetry: number;
   retryNow: () => void;
 }
 
@@ -23,9 +23,10 @@ export function usePolling(
   } = options;
 
   const [errorCount, setErrorCount] = useState(0);
-  const [currentInterval, setCurrentInterval] = useState(interval);
+  const [secondsUntilRetry, setSecondsUntilRetry] = useState(0);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentIntervalRef = useRef(interval);
   const fetchFnRef = useRef(fetchFn);
   fetchFnRef.current = fetchFn;
@@ -35,12 +36,22 @@ export function usePolling(
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
+    if (countdownRef.current !== null) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
   }, []);
 
   const scheduleNext = useCallback(
     (delay: number) => {
       clearScheduled();
+      const retryAt = Date.now() + delay;
       timeoutRef.current = setTimeout(() => poll(), delay);
+      setSecondsUntilRetry(Math.ceil(delay / 1000));
+      countdownRef.current = setInterval(() => {
+        const remaining = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+        setSecondsUntilRetry(remaining);
+      }, 1000);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -50,7 +61,6 @@ export function usePolling(
     try {
       await fetchFnRef.current();
       currentIntervalRef.current = interval;
-      setCurrentInterval(interval);
       setErrorCount(0);
     } catch {
       const next = Math.min(
@@ -58,7 +68,6 @@ export function usePolling(
         maxInterval,
       );
       currentIntervalRef.current = next;
-      setCurrentInterval(next);
       setErrorCount((c) => c + 1);
     }
     scheduleNext(currentIntervalRef.current);
@@ -67,7 +76,6 @@ export function usePolling(
 
   const retryNow = useCallback(() => {
     currentIntervalRef.current = interval;
-    setCurrentInterval(interval);
     setErrorCount(0);
     clearScheduled();
     poll();
@@ -78,5 +86,5 @@ export function usePolling(
     return clearScheduled;
   }, [poll, clearScheduled]);
 
-  return { errorCount, currentInterval, retryNow };
+  return { errorCount, secondsUntilRetry, retryNow };
 }
