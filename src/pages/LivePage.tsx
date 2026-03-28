@@ -74,6 +74,7 @@ export const LivePage = () => {
       interval: 10000,
       maxInterval: 60000,
       backoffFactor: 2,
+      enabled: !!eventId,
     },
   );
 
