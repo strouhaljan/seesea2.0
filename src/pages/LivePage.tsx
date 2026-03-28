@@ -27,18 +27,27 @@ export const LivePage = () => {
   const { eventId, crews, highlightedCrews } = useEventConfig();
   const mapRef = useRef<LiveMapHandle>(null);
 
-  const [selectedBoatIds, setSelectedBoatIds] = useState<Set<number>>(
-    new Set(),
-  );
+  const [selectedBoatIds, setSelectedBoatIds] = useState<Set<number>>(() => {
+    const saved = localStorage.getItem("selectedBoatIds");
+    return saved ? new Set(JSON.parse(saved) as number[]) : new Set();
+  });
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
   const initializedRef = useRef(false);
 
-  // Show highlighted boats in the panel on load
+  // Show highlighted boats in the panel on load (only if nothing saved)
   useEffect(() => {
     if (initializedRef.current || highlightedCrews.size === 0) return;
+    if (selectedBoatIds.size > 0) {
+      initializedRef.current = true;
+      return;
+    }
     initializedRef.current = true;
     setSelectedBoatIds(new Set(highlightedCrews));
   }, [highlightedCrews]);
+
+  useEffect(() => {
+    localStorage.setItem("selectedBoatIds", JSON.stringify([...selectedBoatIds]));
+  }, [selectedBoatIds]);
 
   const handleBoatClick = useCallback((boatId: number) => {
     setSelectedBoatIds((prev) => new Set(prev).add(boatId));
