@@ -28,6 +28,7 @@ h1 {
 /* Override mapbox default styles for better UX */
 .mapboxgl-popup-content {
   padding: 15px;
+  padding-left: 0;
 }
 
 .mapboxgl-popup-close-button {
