@@ -9,7 +9,7 @@ import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 import { useEventConfig } from "../hooks/useEventConfig";
 import { generateVesselPopupHTML } from "../utils/popupContent";
-import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "../utils/mapConfig";
+import { MAP_STYLE, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID } from "../utils/mapConfig";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -64,6 +64,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(false);
   const rootsRef = useRef<Record<string, Root>>({});
   const popupsRef = useRef<Record<string, mapboxgl.Popup>>({});
+  const hasCenteredRef = useRef(false);
   const { crews, highlightedCrews, toggleHighlight } = useEventConfig();
 
   // Store toggleHighlight in a ref so the delegated listener always sees the latest
@@ -78,11 +79,15 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
       container: mapContainer.current,
       style: MAP_STYLE,
       center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
+      zoom: getSavedZoom(),
     });
 
     map.current.on("load", () => {
       setMapLoaded(true);
+    });
+
+    map.current.on("zoomend", () => {
+      if (map.current) saveZoom(map.current.getZoom());
     });
 
     // Delegated click handler for highlight toggle stars in popups
@@ -409,16 +414,15 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
       }
     });
 
-    // Fit map to all bounds on first load with data
-    if (
-      hasValidBounds &&
-      Object.keys(markersRef.current).length > 0 &&
-      Object.keys(markersRef.current).length !== existingVesselIds.size
-    ) {
-      map.current.fitBounds(allBounds, {
-        padding: 50,
-        maxZoom: 12,
-      });
+    // Center on target vessel on first load with data
+    if (!hasCenteredRef.current && Object.keys(markersRef.current).length > 0) {
+      hasCenteredRef.current = true;
+      const targetData = vesselsData[CENTER_VESSEL_ID];
+      if (targetData?.coords) {
+        map.current.setCenter(targetData.coords as [number, number]);
+      } else if (hasValidBounds) {
+        map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
+      }
     }
   }, [mapLoaded, vesselsData, highlightedCrews, showOnlyHighlighted]);
 
