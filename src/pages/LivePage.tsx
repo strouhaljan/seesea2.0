@@ -127,15 +127,6 @@ export const LivePage = () => {
 
   return (
     <div className="map-view live-view">
-      <div className="live-status">
-        {lastUpdated && !error && (
-          <div className="last-updated">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-            <span className="update-badge">LIVE</span>
-          </div>
-        )}
-      </div>
-
       {hasStaleData && lastUpdated && (
         <div className="stale-data-alert">
           <div className="stale-data-alert-content">
@@ -184,6 +175,15 @@ export const LivePage = () => {
           onFocusBoat={handleFocusBoat}
         />
       </div>
+
+      {lastUpdated && !error && (
+        <div className="live-status">
+          <div className="last-updated">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+            <span className="update-badge">LIVE</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
