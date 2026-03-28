@@ -7,7 +7,7 @@ export function generateVesselPopupHTML(
   vesselColor: string,
   crewDescription?: string,
 ): string {
-  return `<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
+  return `<div style="border-left: 4px solid ${vesselColor}; padding-left: 12px;">
           <strong>Vessel ID: ${vesselId}</strong>
           <table class="vessel-data">
           ${
