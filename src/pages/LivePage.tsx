@@ -30,6 +30,7 @@ export const LivePage = () => {
   const [selectedBoatIds, setSelectedBoatIds] = useState<Set<number>>(
     new Set(),
   );
+  const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
   const initializedRef = useRef(false);
 
   // Show highlighted boats in the panel on load
@@ -41,6 +42,7 @@ export const LivePage = () => {
 
   const handleBoatClick = useCallback((boatId: number) => {
     setSelectedBoatIds((prev) => new Set(prev).add(boatId));
+    setActiveBoatId(boatId);
   }, []);
 
   const handleBoatDismiss = useCallback((boatId: number) => {
@@ -53,6 +55,10 @@ export const LivePage = () => {
 
   const handleDismissAll = useCallback(() => {
     setSelectedBoatIds(new Set());
+  }, []);
+
+  const handleClearActive = useCallback(() => {
+    setActiveBoatId(null);
   }, []);
 
   const handleFocusBoat = useCallback((boatId: number) => {
@@ -173,15 +179,19 @@ export const LivePage = () => {
         <LiveMap
           ref={mapRef}
           vesselsData={liveData}
+          activeBoatId={activeBoatId}
           onBoatClick={handleBoatClick}
+          onClearActive={handleClearActive}
         />
         <BoatPanel
           crews={crews}
           vesselsData={liveData}
           selectedBoatIds={selectedBoatIds}
+          activeBoatId={activeBoatId}
           onDismiss={handleBoatDismiss}
           onDismissAll={handleDismissAll}
           onFocusBoat={handleFocusBoat}
+          onActivate={(id) => setActiveBoatId(id)}
         />
       </div>
     </div>

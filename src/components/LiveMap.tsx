@@ -8,6 +8,8 @@ import { Root } from "react-dom/client";
 import { useEventConfig } from "../hooks/useEventConfig";
 import { MAP_STYLE, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID } from "../utils/mapConfig";
 import { OUR_BOAT } from "../config";
+import { WindOverlay } from "./WindOverlay";
+import { fetchWindGrid, blendBoatData, WindModel } from "../utils/windGrid";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -19,18 +21,24 @@ export interface LiveMapHandle {
 
 interface LiveMapProps {
   vesselsData: Record<string, VesselDataPoint>;
+  activeBoatId: number | null;
   onBoatClick: (boatId: number) => void;
+  onClearActive: () => void;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatClick }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBoatId, onBoatClick, onClearActive }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const markersRef = useRef<Record<string, Marker>>({});
   const [colorMode, setColorMode] = useState<ColorMode>("seesea");
   const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(false);
+  const [showWind, setShowWind] = useState(false);
+  const [windModel, setWindModel] = useState<WindModel>("icon_2i");
+  const [blendBoats, setBlendBoats] = useState(false);
   const rootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
+  const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
 
   useImperativeHandle(ref, () => ({
@@ -58,6 +66,10 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
       if (map.current) saveZoom(map.current.getZoom());
     });
 
+    map.current.on("click", () => {
+      onClearActive();
+    });
+
     return () => {
       // Clean up all React roots
       Object.values(rootsRef.current).forEach((root) => {
@@ -69,9 +81,46 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
       });
 
       // Remove the map instance (which will clean up all layers and sources)
+      windOverlayRef.current?.destroy();
       map.current?.remove();
     };
   }, []);
+
+  // Wind overlay lifecycle
+  useEffect(() => {
+    if (!mapLoaded || !map.current || !showWind) {
+      windOverlayRef.current?.hide();
+      return;
+    }
+
+    let refreshInterval: ReturnType<typeof setInterval>;
+
+    const loadGrid = async () => {
+      try {
+        let grid = await fetchWindGrid(windModel);
+        if (blendBoats && Object.keys(vesselsData).length > 0) {
+          grid = blendBoatData(grid, vesselsData);
+        }
+        if (!map.current) return;
+        if (!windOverlayRef.current) {
+          windOverlayRef.current = new WindOverlay(map.current, grid);
+        } else {
+          windOverlayRef.current.updateGrid(grid);
+        }
+        windOverlayRef.current.show();
+      } catch (err) {
+        console.error("Failed to load wind grid:", err);
+      }
+    };
+
+    loadGrid();
+    refreshInterval = setInterval(loadGrid, 30 * 60 * 1000);
+
+    return () => {
+      clearInterval(refreshInterval);
+      windOverlayRef.current?.hide();
+    };
+  }, [mapLoaded, showWind, windModel, blendBoats, vesselsData]);
 
   // Update markers based on live data
   useEffect(() => {
@@ -121,6 +170,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
           <BoatIcon
             highlight={isHighlighted}
             isOurs={crew?.name === OUR_BOAT}
+            selected={activeBoatId === parseInt(vesselId)}
             color={crew?.track_color}
             colorMode={colorMode}
             rotation={rotation}
@@ -147,6 +197,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
           <BoatIcon
             highlight={isHighlighted}
             isOurs={crew?.name === OUR_BOAT}
+            selected={activeBoatId === parseInt(vesselId)}
             color={crew?.track_color}
             colorMode={colorMode}
             rotation={rotation}
@@ -158,13 +209,10 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
           />,
         );
 
-        // Click handler to add to side panel and zoom in
-        el.addEventListener("click", () => {
+        // Click handler to add to side panel
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
           onBoatClick(parseInt(vesselId));
-          const pos = markersRef.current[vesselId]?.getLngLat();
-          if (pos && map.current) {
-            map.current.flyTo({ center: pos, zoom: 17, speed: 2 });
-          }
         });
 
         // Create the marker
@@ -208,7 +256,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode]);
+  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId]);
 
   return (
     <div className="map-wrapper">
@@ -238,6 +286,53 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
             <span className="toggle-switch__slider" />
           </label>
         </div>
+        <div className="controls-panel__divider" />
+        <div className="controls-panel__row">
+          <span className="controls-panel__label">Wind overlay</span>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={showWind}
+              onChange={() => setShowWind((prev) => !prev)}
+            />
+            <span className="toggle-switch__slider" />
+          </label>
+        </div>
+        {showWind && (
+          <>
+            <div className="controls-panel__row">
+              <label className="controls-panel__radio">
+                <input
+                  type="radio"
+                  name="windModel"
+                  checked={windModel === "icon_2i"}
+                  onChange={() => setWindModel("icon_2i")}
+                />
+                ICON-2I
+              </label>
+              <label className="controls-panel__radio">
+                <input
+                  type="radio"
+                  name="windModel"
+                  checked={windModel === "ecmwf"}
+                  onChange={() => setWindModel("ecmwf")}
+                />
+                ECMWF
+              </label>
+            </div>
+            <div className="controls-panel__row">
+              <span className="controls-panel__label">Blend boats</span>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={blendBoats}
+                  onChange={() => setBlendBoats((prev) => !prev)}
+                />
+                <span className="toggle-switch__slider" />
+              </label>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

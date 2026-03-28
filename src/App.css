@@ -314,6 +314,20 @@ main {
   transform: translateX(16px);
 }
 
+.controls-panel__divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 2px 0;
+}
+
+.controls-panel__radio {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: #ccc;
+  font-size: 11px;
+}
+
 /* Boat side panel */
 .boat-panel {
   position: absolute;
@@ -367,6 +381,13 @@ main {
 .boat-card--ours {
   border-left-width: 6px;
   background: rgba(0, 60, 90, 0.9);
+}
+
+.boat-card--active {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: -1px;
+  background: rgba(50, 50, 80, 0.95);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
 
 .boat-card__body {
