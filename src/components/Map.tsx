@@ -4,7 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
 import { generateColorFromId } from "../utils/svgGenerator";
 import { generateVesselPopupHTML } from "../utils/popupContent";
-import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "../utils/mapConfig";
+import { MAP_STYLE, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID } from "../utils/mapConfig";
 import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
@@ -36,11 +36,15 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
       container: mapContainer.current,
       style: MAP_STYLE,
       center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
+      zoom: getSavedZoom(),
     });
 
     map.current.on("load", () => {
       setMapLoaded(true);
+    });
+
+    map.current.on("zoomend", () => {
+      if (map.current) saveZoom(map.current.getZoom());
     });
 
     const handlePopupClick = (e: MouseEvent) => {
@@ -193,12 +197,12 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
       }
     });
 
-    // Fit map to all bounds
-    if (hasValidBounds) {
-      map.current.fitBounds(allBounds, {
-        padding: 50,
-        maxZoom: 12,
-      });
+    // Center on target vessel, or fit all bounds as fallback
+    const targetTrack = vesselsData[CENTER_VESSEL_ID];
+    if (targetTrack && targetTrack.length > 0) {
+      map.current.setCenter(targetTrack[0].coords as [number, number]);
+    } else if (hasValidBounds) {
+      map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
     }
   }, [mapLoaded, vesselsData]);
 
