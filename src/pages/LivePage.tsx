@@ -49,7 +49,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
 
   const handleBoatClick = useCallback((boatId: number) => {
     setActiveBoatId(boatId);
-  }, []);
+    if (panelCollapsed) onTogglePanel();
+  }, [panelCollapsed, onTogglePanel]);
 
   const handleClearActive = useCallback(() => {
     setActiveBoatId(null);
