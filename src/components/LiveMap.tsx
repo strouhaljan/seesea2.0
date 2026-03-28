@@ -61,6 +61,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const markersRef = useRef<Record<string, Marker>>({});
   const [showWindHeatmap, setShowWindHeatmap] = useState(false);
+  const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(false);
   const rootsRef = useRef<Record<string, Root>>({});
   const popupsRef = useRef<Record<string, mapboxgl.Popup>>({});
   const { crews, highlightedCrews, toggleHighlight } = useEventConfig();
@@ -205,21 +206,34 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
       );
     }
 
-    // Add a toggle control for the heatmap
-    const toggleBtn = document.createElement("button");
-    toggleBtn.className = `mapboxgl-ctrl mapboxgl-ctrl-group wind-toggle-btn ${
+    // Add toggle controls
+    const controlContainer = document.createElement("div");
+    controlContainer.className = "mapboxgl-ctrl-top-right map-toggle-controls";
+
+    // Wind heatmap toggle
+    const windBtn = document.createElement("button");
+    windBtn.className = `mapboxgl-ctrl mapboxgl-ctrl-group wind-toggle-btn ${
       showWindHeatmap ? "active" : ""
     }`;
-    toggleBtn.innerHTML = "🌬️";
-    toggleBtn.title = "Toggle Wind Heatmap";
-    toggleBtn.onclick = () => {
-      const newState = !showWindHeatmap;
-      setShowWindHeatmap(newState);
+    windBtn.innerHTML = "🌬️";
+    windBtn.title = "Toggle Wind Heatmap";
+    windBtn.onclick = () => {
+      setShowWindHeatmap((prev) => !prev);
     };
+    controlContainer.appendChild(windBtn);
 
-    const controlContainer = document.createElement("div");
-    controlContainer.className = "mapboxgl-ctrl-top-right";
-    controlContainer.appendChild(toggleBtn);
+    // Highlighted-only filter toggle
+    const highlightBtn = document.createElement("button");
+    highlightBtn.className = `mapboxgl-ctrl mapboxgl-ctrl-group wind-toggle-btn ${
+      showOnlyHighlighted ? "active" : ""
+    }`;
+    highlightBtn.innerHTML = "⭐";
+    highlightBtn.title = "Show only highlighted vessels";
+    highlightBtn.onclick = () => {
+      setShowOnlyHighlighted((prev) => !prev);
+    };
+    controlContainer.appendChild(highlightBtn);
+
     mapContainer.current?.appendChild(controlContainer);
 
     // Clean up the control when unmounted
@@ -228,7 +242,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         controlContainer.parentNode.removeChild(controlContainer);
       }
     };
-  }, [mapLoaded, showWindHeatmap]);
+  }, [mapLoaded, showWindHeatmap, showOnlyHighlighted]);
 
   // Update markers based on live data
   useEffect(() => {
@@ -378,6 +392,16 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
       }
     });
 
+    // Show/hide markers based on highlighted filter
+    Object.entries(markersRef.current).forEach(([vesselId, marker]) => {
+      const isHighlighted = highlightedCrews.has(parseInt(vesselId));
+      const shouldShow = !showOnlyHighlighted || isHighlighted;
+      marker.getElement().style.display = shouldShow ? "" : "none";
+      if (!shouldShow && marker.getPopup()?.isOpen()) {
+        marker.getPopup()?.remove();
+      }
+    });
+
     // Remove markers for vessels not in the current data
     existingVesselIds.forEach((id) => {
       if (!currentVesselIds.has(id)) {
@@ -402,7 +426,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         maxZoom: 12,
       });
     }
-  }, [mapLoaded, vesselsData, highlightedCrews]);
+  }, [mapLoaded, vesselsData, highlightedCrews, showOnlyHighlighted]);
 
   return (
     <div className="map-wrapper">
