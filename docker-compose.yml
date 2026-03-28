@@ -9,6 +9,8 @@ services:
       - "5173:5173"
     environment:
       - NODE_ENV=development
+      - VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
+      - VITE_EVENT_SLUG=${VITE_EVENT_SLUG}
 
   server:
     build:
