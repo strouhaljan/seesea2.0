@@ -15,7 +15,7 @@ export function generateVesselPopupHTML(
 
   const title = crewDescription || vesselId;
 
-  return `<div style="border-left: 4px solid ${vesselColor}; padding-left: 12px; margin-left: -15px; padding-top: 4px; padding-bottom: 4px;">
+  return `<div style="border-left: 4px solid ${vesselColor}; padding-left: 12px; padding-top: 4px; padding-bottom: 4px;">
           <strong>${title}${star}</strong>
           <table class="vessel-data">
             <tr>
