@@ -6,9 +6,15 @@ export function generateVesselPopupHTML(
   data: VesselDataPoint,
   vesselColor: string,
   crewDescription?: string,
+  highlighted?: boolean,
 ): string {
+  const starStyle = `cursor:pointer; font-size:16px; margin-left:6px; user-select:none;`;
+  const star = highlighted
+    ? `<span class="highlight-toggle" data-vessel-id="${vesselId}" style="${starStyle}" title="Remove highlight">&#9733;</span>`
+    : `<span class="highlight-toggle" data-vessel-id="${vesselId}" style="${starStyle} opacity:0.4;" title="Highlight crew">&#9734;</span>`;
+
   return `<div style="border-left: 4px solid ${vesselColor}; padding-left: 12px;">
-          <strong>Vessel ID: ${vesselId}</strong>
+          <strong>Vessel ID: ${vesselId}${star}</strong>
           <table class="vessel-data">
           ${
             crewDescription

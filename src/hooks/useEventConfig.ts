@@ -18,6 +18,8 @@ interface EventConfig {
   crews: Crew[];
   loading: boolean;
   error: string | null;
+  highlightedCrews: Set<number>;
+  toggleHighlight: (crewId: number) => void;
 }
 
 export const EventConfigContext = createContext<EventConfig>({
@@ -25,6 +27,8 @@ export const EventConfigContext = createContext<EventConfig>({
   crews: [],
   loading: true,
   error: null,
+  highlightedCrews: new Set(),
+  toggleHighlight: () => {},
 });
 
 export const useEventConfig = () => useContext(EventConfigContext);

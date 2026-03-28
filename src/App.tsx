@@ -4,12 +4,14 @@ import {
   EventConfigContext,
   useEventConfigLoader,
 } from "./hooks/useEventConfig";
+import { useHighlightedCrews } from "./hooks/useHighlightedCrews";
 
 function App() {
   const eventConfig = useEventConfigLoader();
+  const { highlightedCrews, toggleHighlight } = useHighlightedCrews();
 
   return (
-    <EventConfigContext.Provider value={eventConfig}>
+    <EventConfigContext.Provider value={{ ...eventConfig, highlightedCrews, toggleHighlight }}>
     <div className="app-container">
       <header
         style={{
