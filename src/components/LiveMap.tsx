@@ -10,8 +10,7 @@ import { Root } from "react-dom/client";
 import { crewList } from "../crewList";
 import { getColorBySpeed } from "../utils/wind";
 
-mapboxgl.accessToken =
-  "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface LiveMapProps {
   vesselsData: Record<string, VesselDataPoint>;
