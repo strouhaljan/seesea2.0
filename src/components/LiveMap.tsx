@@ -15,6 +15,23 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 export type ColorMode = "seesea" | "wind";
 
+const FUTURE_INTERVALS = [15, 30, 45, 60]; // minutes
+
+/** Calculate a future position given current coords, speed (knots), and course (degrees from north). */
+function futurePosition(
+  coords: [number, number],
+  sogKnots: number,
+  cogDeg: number,
+  minutes: number,
+): [number, number] {
+  const distanceNm = sogKnots * (minutes / 60);
+  const cogRad = (cogDeg * Math.PI) / 180;
+  const latRad = (coords[1] * Math.PI) / 180;
+  const newLat = coords[1] + (distanceNm * Math.cos(cogRad)) / 60;
+  const newLng = coords[0] + (distanceNm * Math.sin(cogRad)) / (60 * Math.cos(latRad));
+  return [newLng, newLat];
+}
+
 export interface LiveMapHandle {
   flyTo: (coords: [number, number]) => void;
 }
@@ -46,7 +63,12 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
   const [blendBoats, setBlendBoats] = useState(
     () => localStorage.getItem("blendBoats") === "true"
   );
+  const [showFuturePositions, setShowFuturePositions] = useState(
+    () => localStorage.getItem("showFuturePositions") === "true"
+  );
   const rootsRef = useRef<Record<string, Root>>({});
+  const futureMarkersRef = useRef<Record<string, Marker[]>>({});
+  const futureRootsRef = useRef<Record<string, Root[]>>({});
   const hasCenteredRef = useRef(false);
   const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
@@ -70,6 +92,10 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
   useEffect(() => {
     localStorage.setItem("blendBoats", String(blendBoats));
   }, [blendBoats]);
+
+  useEffect(() => {
+    localStorage.setItem("showFuturePositions", String(showFuturePositions));
+  }, [showFuturePositions]);
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
@@ -103,11 +129,10 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
     return () => {
       // Clean up all React roots
       Object.values(rootsRef.current).forEach((root) => {
-        try {
-          root.unmount();
-        } catch (e) {
-          console.error("Error unmounting React root:", e);
-        }
+        try { root.unmount(); } catch (e) { console.error("Error unmounting React root:", e); }
+      });
+      Object.values(futureRootsRef.current).flat().forEach((root) => {
+        try { root.unmount(); } catch (e) { /* ignore */ }
       });
 
       // Remove the map instance (which will clean up all layers and sources)
@@ -276,6 +301,74 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
       }
     });
 
+    // --- Future position markers ---
+    // Remove all existing future markers first
+    Object.values(futureMarkersRef.current).flat().forEach((m) => m.remove());
+    Object.values(futureRootsRef.current).flat().forEach((r) => {
+      try { r.unmount(); } catch (_) { /* ignore */ }
+    });
+    futureMarkersRef.current = {};
+    futureRootsRef.current = {};
+
+    if (showFuturePositions) {
+      Object.entries(vesselsData).forEach(([vesselId, data]) => {
+        if (!data.coords || !data.sog || data.sog <= 0) return;
+
+        const cog = data.cog || data.hdg || 0;
+        if (!cog) return;
+
+        const isHighlighted = highlightedCrews.has(parseInt(vesselId));
+        const shouldShow = !showOnlyHighlighted || isHighlighted;
+        if (!shouldShow) return;
+
+        const crew = crews.find((c) => c.id === parseInt(vesselId));
+        const markers: Marker[] = [];
+        const roots: Root[] = [];
+
+        FUTURE_INTERVALS.forEach((minutes, idx) => {
+          const futureCoords = futurePosition(
+            data.coords as [number, number],
+            data.sog,
+            cog,
+            minutes,
+          );
+
+          const el = document.createElement("div");
+          el.className = "vessel-marker vessel-marker--future";
+          el.style.width = "24px";
+          el.style.height = "35px";
+          el.style.pointerEvents = "none";
+
+          const opacity = 0.6 - idx * 0.12; // 0.6, 0.48, 0.36, 0.24
+          const root = createRoot(el);
+          roots.push(root);
+
+          root.render(
+            <BoatIcon
+              color={crew?.track_color}
+              colorMode={colorMode}
+              rotation={data.hdg || data.cog || 0}
+              opacity={opacity}
+              label={`${minutes}m`}
+            />,
+          );
+
+          const marker = new mapboxgl.Marker({
+            element: el,
+            anchor: "center",
+            rotationAlignment: "map",
+          })
+            .setLngLat(futureCoords)
+            .addTo(map.current!);
+
+          markers.push(marker);
+        });
+
+        futureMarkersRef.current[vesselId] = markers;
+        futureRootsRef.current[vesselId] = roots;
+      });
+    }
+
     // Center on target vessel on first load with data
     if (!hasCenteredRef.current && Object.keys(markersRef.current).length > 0) {
       hasCenteredRef.current = true;
@@ -286,7 +379,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId]);
+  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, showFuturePositions]);
 
   return (
     <div className="map-wrapper">
@@ -312,6 +405,17 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, activeBo
               type="checkbox"
               checked={showOnlyHighlighted}
               onChange={() => setShowOnlyHighlighted((prev) => !prev)}
+            />
+            <span className="toggle-switch__slider" />
+          </label>
+        </div>
+        <div className="controls-panel__row">
+          <span className="controls-panel__label">Future positions</span>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={showFuturePositions}
+              onChange={() => setShowFuturePositions((prev) => !prev)}
             />
             <span className="toggle-switch__slider" />
           </label>

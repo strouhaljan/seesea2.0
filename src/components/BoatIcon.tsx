@@ -14,6 +14,8 @@ interface BoatIconProps {
   windDirection?: number;
   windSpeed?: number;
   showWindArrow?: boolean;
+  opacity?: number;
+  label?: string;
 }
 
 const BoatIcon: React.FC<BoatIconProps> = ({
@@ -27,6 +29,8 @@ const BoatIcon: React.FC<BoatIconProps> = ({
   windDirection,
   windSpeed,
   showWindArrow = false,
+  opacity = 1,
+  label,
 }) => {
   if (!rotation) {
     return null;
@@ -49,6 +53,7 @@ const BoatIcon: React.FC<BoatIconProps> = ({
       style={{
         position: "relative",
         filter: selected ? "drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px rgba(255,255,255,0.5))" : "none",
+        opacity,
       }}
     >
       <svg
@@ -106,6 +111,23 @@ const BoatIcon: React.FC<BoatIconProps> = ({
           }}
         >
           {formattedWindSpeed}
+        </span>
+      )}
+
+      {/* Future position label */}
+      {label && (
+        <span
+          style={{
+            position: "absolute",
+            top: "-16px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            fontSize: "10px",
+            color: "rgba(255,255,255,0.7)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {label}
         </span>
       )}
     </div>
