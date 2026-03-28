@@ -13,11 +13,24 @@ export interface Crew {
   highlight?: boolean;
 }
 
-interface EventConfig {
+export interface EventLeg {
+  id: number;
+  name: string;
+  active: number;
+  start: string;
+  end: string;
+  race_type: string;
+}
+
+interface EventConfigBase {
   eventId: number | null;
   crews: Crew[];
+  legs: EventLeg[];
   loading: boolean;
   error: string | null;
+}
+
+interface EventConfig extends EventConfigBase {
   highlightedCrews: Set<number>;
   toggleHighlight: (crewId: number) => void;
 }
@@ -25,6 +38,7 @@ interface EventConfig {
 export const EventConfigContext = createContext<EventConfig>({
   eventId: null,
   crews: [],
+  legs: [],
   loading: true,
   error: null,
   highlightedCrews: new Set(),
@@ -33,10 +47,11 @@ export const EventConfigContext = createContext<EventConfig>({
 
 export const useEventConfig = () => useContext(EventConfigContext);
 
-export function useEventConfigLoader(): EventConfig {
-  const [config, setConfig] = useState<EventConfig>({
+export function useEventConfigLoader(): EventConfigBase {
+  const [config, setConfig] = useState<EventConfigBase>({
     eventId: null,
     crews: [],
+    legs: [],
     loading: true,
     error: null,
   });
@@ -53,6 +68,7 @@ export function useEventConfigLoader(): EventConfig {
         setConfig({
           eventId: data.eventId,
           crews: data.crews,
+          legs: data.legs ?? [],
           loading: false,
           error: null,
         });

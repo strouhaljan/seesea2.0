@@ -2,9 +2,19 @@ import { Router } from "express";
 
 const router = Router();
 
+interface EventLeg {
+  id: number;
+  name: string;
+  active: number;
+  start: string;
+  end: string;
+  race_type: string;
+}
+
 interface EventConfig {
   eventId: number;
   crews: unknown[];
+  legs: EventLeg[];
   fetchedAt: number;
 }
 
@@ -16,7 +26,7 @@ router.get("/:slug", async (req, res) => {
 
   const cached = cache.get(slug);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    res.json({ eventId: cached.eventId, crews: cached.crews });
+    res.json({ eventId: cached.eventId, crews: cached.crews, legs: cached.legs });
     return;
   }
 
@@ -32,11 +42,12 @@ router.get("/:slug", async (req, res) => {
     const config: EventConfig = {
       eventId: data.cc_event_id,
       crews: data.cc_object ?? [],
+      legs: data.cc_event_leg ?? [],
       fetchedAt: Date.now(),
     };
 
     cache.set(slug, config);
-    res.json({ eventId: config.eventId, crews: config.crews });
+    res.json({ eventId: config.eventId, crews: config.crews, legs: config.legs });
   } catch {
     res.status(502).json({ error: "Failed to fetch event config" });
   }
