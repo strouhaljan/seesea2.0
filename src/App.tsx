@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import {
   EventConfigContext,
@@ -18,6 +18,15 @@ function App() {
   const { highlightedCrews, toggleHighlight } = useHighlightedCrews();
   const route = useRoute();
   const seededRef = useRef(false);
+  const [panelCollapsed, setPanelCollapsed] = useState(
+    () => localStorage.getItem("boatPanelCollapsed") === "true"
+  );
+  const togglePanel = useCallback(() => {
+    setPanelCollapsed((v) => {
+      localStorage.setItem("boatPanelCollapsed", String(!v));
+      return !v;
+    });
+  }, []);
 
   // Seed default highlighted boats on first load (if nothing saved yet)
   useEffect(() => {
@@ -39,33 +48,17 @@ function App() {
       value={{ ...eventConfig, highlightedCrews, toggleHighlight }}
     >
       <div className="app-container">
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexDirection: "row",
-          }}
-        >
+        <header>
+          {route === "live" && (
+            <button
+              className="header__panel-toggle"
+              onClick={togglePanel}
+              title={panelCollapsed ? "Show vessels" : "Hide vessels"}
+            >
+              {panelCollapsed ? "›" : "‹"}
+            </button>
+          )}
           <h1>SeeSea <sup style={{ fontSize: "0.4em" }}>2.0</sup></h1>
-          <nav className="main-nav">
-            <a
-              href="#/"
-              className={
-                "nav-link" + (route === "live" ? " active" : "")
-              }
-            >
-              Live
-            </a>
-            <a
-              href="#/history"
-              className={
-                "nav-link" + (route === "history" ? " active" : "")
-              }
-            >
-              History
-            </a>
-          </nav>
         </header>
         <main>
           {route === "history" ? (
@@ -75,7 +68,7 @@ function App() {
               <HistoryPage />
             </Suspense>
           ) : (
-            <LivePage />
+            <LivePage panelCollapsed={panelCollapsed} onTogglePanel={togglePanel} />
           )}
         </main>
       </div>
