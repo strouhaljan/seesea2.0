@@ -62,6 +62,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const markersRef = useRef<Record<string, Marker>>({});
   const [showWindHeatmap, setShowWindHeatmap] = useState(false);
   const rootsRef = useRef<Record<string, Root>>({});
+  const popupsRef = useRef<Record<string, mapboxgl.Popup>>({});
   const { crews, highlightedCrews, toggleHighlight } = useEventConfig();
 
   // Store toggleHighlight in a ref so the delegated listener always sees the latest
@@ -354,6 +355,15 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             highlightedCrews.has(parseInt(vesselId)),
           ));
 
+        popupsRef.current[vesselId] = popup;
+
+        // Close all other popups when this one opens
+        popup.on("open", () => {
+          Object.entries(popupsRef.current).forEach(([id, p]) => {
+            if (id !== vesselId && p.isOpen()) p.remove();
+          });
+        });
+
         // Create the marker
         const marker = new mapboxgl.Marker({
           element: el,
@@ -377,6 +387,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
           delete rootsRef.current[id];
         }
         delete markersRef.current[id];
+        delete popupsRef.current[id];
       }
     });
 

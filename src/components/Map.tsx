@@ -165,6 +165,13 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
         popupsRef.current[vesselId] = popup;
 
+        // Close all other popups when this one opens
+        popup.on("open", () => {
+          Object.entries(popupsRef.current).forEach(([id, p]) => {
+            if (id !== vesselId && p.isOpen()) p.remove();
+          });
+        });
+
         // Initial popup content including wind data if available
         const firstPoint = trackData[0];
         const initialPopupContent = generateVesselPopupHTML(
