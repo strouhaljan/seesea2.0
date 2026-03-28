@@ -27,9 +27,8 @@ header {
   background-color: #1a1a2e;
   color: white;
   padding: 0.35rem 0.75rem;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
   align-items: center;
   gap: 0.5rem;
 }
@@ -37,9 +36,30 @@ header {
 header h1 {
   font-size: 1.1rem;
   line-height: 1;
+  text-align: center;
+  grid-column: 2;
+}
+
+.header__panel-toggle {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  color: #ccc;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .main-nav {
+  grid-column: 2;
   display: flex;
   justify-content: center;
   gap: 1.5rem;
@@ -354,39 +374,87 @@ main {
 /* Boat side panel */
 .boat-panel {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 0;
+  left: 0;
+  bottom: 0;
   z-index: 10;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+  overflow: visible;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: calc(100% - 20px);
-  overflow-y: auto;
-  pointer-events: none;
 }
 
-.boat-panel__toolbar {
+.boat-panel--collapsed {
+  transform: translateX(-100%);
+}
+
+
+.boat-panel__list {
   display: flex;
-  gap: 20px;
-  pointer-events: auto;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0 10px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
 
-.boat-panel__toggle,
-.boat-panel__close-all {
-  pointer-events: auto;
-  background: rgba(26, 26, 46, 0.9);
-  color: #ccc;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
+.boat-panel__search-wrap {
+  flex-shrink: 0;
+  position: relative;
+}
+
+.boat-panel__search {
+  margin: 0;
+  padding: 8px 28px 8px 10px;
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0;
+  color: #eee;
+  font-size: 12px;
+  outline: none;
+}
+
+.boat-panel__search::placeholder {
+  color: #888;
+}
+
+.boat-panel__search:focus {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.boat-panel__search-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 16px;
   cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
 }
 
-.boat-panel__toggle:hover,
-.boat-panel__close-all:hover {
+.boat-panel__search-clear:hover {
   color: #fff;
-  background: rgba(26, 26, 46, 1);
+}
+
+.boat-panel__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 4px 0;
 }
 
 .boat-card {
@@ -396,9 +464,9 @@ main {
   color: #eee;
   font-size: 12px;
   width: 240px;
-  pointer-events: auto;
   display: flex;
   align-items: stretch;
+  flex-shrink: 0;
 }
 
 .boat-card--ours {
@@ -420,28 +488,20 @@ main {
   cursor: pointer;
 }
 
-.boat-card__actions {
-  display: flex;
-  flex-shrink: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.boat-card__star,
-.boat-card__close {
+.boat-card__star {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   background: none;
   border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
   color: #999;
   font-size: 16px;
   cursor: pointer;
-}
-
-.boat-card__star {
   line-height: 1;
-  padding-bottom: 6px;
+  flex-shrink: 0;
+  border-radius: 0 4px 4px 0;
 }
 
 .boat-card__star:hover {
@@ -451,16 +511,6 @@ main {
 
 .boat-card__star--active {
   color: #ffd700;
-}
-
-.boat-card__close {
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0 4px 4px 0;
-}
-
-.boat-card__close:hover {
-  background: rgba(255, 0, 0, 0.2);
-  color: #ff4444;
 }
 
 .boat-card__header {

@@ -19,51 +19,23 @@ function formatDataAge(lastUpdated: Date): string {
   return `${hours}h ${minutes % 60}m ago`;
 }
 
-export const LivePage = () => {
+interface LivePageProps {
+  panelCollapsed: boolean;
+  onTogglePanel: () => void;
+}
+
+export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
   const [liveData, setLiveData] = useState<Record<string, VesselDataPoint>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const { eventId, crews, highlightedCrews } = useEventConfig();
+  const { eventId, crews } = useEventConfig();
   const mapRef = useRef<LiveMapHandle>(null);
 
-  const [selectedBoatIds, setSelectedBoatIds] = useState<Set<number>>(() => {
-    const saved = localStorage.getItem("selectedBoatIds");
-    return saved ? new Set(JSON.parse(saved) as number[]) : new Set();
-  });
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
-  const initializedRef = useRef(false);
-
-  // Show highlighted boats in the panel on load (only if nothing saved)
-  useEffect(() => {
-    if (initializedRef.current || highlightedCrews.size === 0) return;
-    if (selectedBoatIds.size > 0) {
-      initializedRef.current = true;
-      return;
-    }
-    initializedRef.current = true;
-    setSelectedBoatIds(new Set(highlightedCrews));
-  }, [highlightedCrews]);
-
-  useEffect(() => {
-    localStorage.setItem("selectedBoatIds", JSON.stringify([...selectedBoatIds]));
-  }, [selectedBoatIds]);
 
   const handleBoatClick = useCallback((boatId: number) => {
-    setSelectedBoatIds((prev) => new Set(prev).add(boatId));
     setActiveBoatId(boatId);
-  }, []);
-
-  const handleBoatDismiss = useCallback((boatId: number) => {
-    setSelectedBoatIds((prev) => {
-      const next = new Set(prev);
-      next.delete(boatId);
-      return next;
-    });
-  }, []);
-
-  const handleDismissAll = useCallback(() => {
-    setSelectedBoatIds(new Set());
   }, []);
 
   const handleClearActive = useCallback(() => {
@@ -186,10 +158,9 @@ export const LivePage = () => {
         <BoatPanel
           crews={crews}
           vesselsData={liveData}
-          selectedBoatIds={selectedBoatIds}
           activeBoatId={activeBoatId}
-          onDismiss={handleBoatDismiss}
-          onDismissAll={handleDismissAll}
+          collapsed={panelCollapsed}
+          onToggleCollapsed={onTogglePanel}
           onFocusBoat={handleFocusBoat}
           onActivate={(id) => setActiveBoatId(id)}
         />
