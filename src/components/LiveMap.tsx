@@ -62,7 +62,11 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
   const markersRef = useRef<Record<string, Marker>>({});
   const [showWindHeatmap, setShowWindHeatmap] = useState(false);
   const rootsRef = useRef<Record<string, Root>>({});
-  const { crews } = useEventConfig();
+  const { crews, highlightedCrews, toggleHighlight } = useEventConfig();
+
+  // Store toggleHighlight in a ref so the delegated listener always sees the latest
+  const toggleHighlightRef = useRef(toggleHighlight);
+  toggleHighlightRef.current = toggleHighlight;
 
   // Initialize map on component mount
   useEffect(() => {
@@ -79,7 +83,22 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
       setMapLoaded(true);
     });
 
+    // Delegated click handler for highlight toggle stars in popups
+    const handlePopupClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains("highlight-toggle")) {
+        const vesselId = target.dataset.vesselId;
+        if (vesselId) {
+          toggleHighlightRef.current(parseInt(vesselId));
+        }
+      }
+    };
+    mapContainer.current.addEventListener("click", handlePopupClick);
+
+    const container = mapContainer.current;
     return () => {
+      container.removeEventListener("click", handlePopupClick);
+
       // Clean up all React roots
       Object.values(rootsRef.current).forEach((root) => {
         try {
@@ -267,7 +286,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
         rootsRef.current[vesselId].render(
           <BoatIcon
-            highlight={!!crews.find((c) => c.id === parseInt(vesselId))?.highlight}
+            highlight={highlightedCrews.has(parseInt(vesselId))}
             color={generateColorFromId(vesselId)}
             width={24}
             height={10}
@@ -288,6 +307,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
           data,
           vesselColor,
           crews.find((crew) => crew.id === parseInt(vesselId))?.description,
+          highlightedCrews.has(parseInt(vesselId)),
         ));
       } else {
         // Create new marker
@@ -303,7 +323,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
         root.render(
           <BoatIcon
-            highlight={!!crews.find((c) => c.id === parseInt(vesselId))?.highlight}
+            highlight={highlightedCrews.has(parseInt(vesselId))}
             color={generateColorFromId(vesselId)}
             width={24}
             height={10}
@@ -331,6 +351,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
             data,
             vesselColor,
             crews.find((crew) => crew.id === parseInt(vesselId))?.description,
+            highlightedCrews.has(parseInt(vesselId)),
           ));
 
         // Create the marker
@@ -370,7 +391,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         maxZoom: 12,
       });
     }
-  }, [mapLoaded, vesselsData]);
+  }, [mapLoaded, vesselsData, highlightedCrews]);
 
   return (
     <div className="map-wrapper">
