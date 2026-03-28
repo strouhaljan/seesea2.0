@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import LiveMap from "../components/LiveMap";
+import { usePolling } from "../hooks/usePolling";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -13,68 +14,53 @@ export const LivePage = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Set up polling for live data
-  useEffect(() => {
-    // Helper function to fetch data
-    const fetchLiveData = async () => {
-      try {
-        setLoading(true);
-        // Fetch live data from the API
-        const eventId = import.meta.env.VITE_EVENT_ID || "201606";
-        const response = await fetch(`/api/cc_event/${eventId}/data/live`);
+  const fetchLiveData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const eventId = import.meta.env.VITE_EVENT_ID || "201606";
+      const response = await fetch(`/api/cc_event/${eventId}/data/live`);
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = (await response.json()) as LiveData;
-
-        // Process the live data - each vessel should have just one current position
-        const currentPositions: Record<string, VesselDataPoint> = {};
-
-        // Extract the current position for each vessel
-        if (data && data.objects) {
-          Object.entries(data.objects).forEach(([vesselId, positionData]) => {
-            // Handle both array format and direct object format
-            if (Array.isArray(positionData) && positionData.length > 0) {
-              // If array format, take the latest position
-              currentPositions[vesselId] =
-                positionData[positionData.length - 1];
-            } else if (
-              typeof positionData === "object" &&
-              positionData !== null
-            ) {
-              // If direct object format, use it directly
-              currentPositions[vesselId] = positionData as VesselDataPoint;
-            }
-          });
-        }
-
-        // Update state with the current positions
-        setLiveData(currentPositions);
-        setLastUpdated(new Date());
-        setError(null);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred",
-        );
-        console.error("Error fetching live data:", err);
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-    };
 
-    // Initial fetch
-    fetchLiveData();
+      const data = (await response.json()) as LiveData;
 
-    // Set up polling interval (every 10 seconds)
-    const intervalId = setInterval(fetchLiveData, 10000);
+      const currentPositions: Record<string, VesselDataPoint> = {};
 
-    // Clean up on unmount
-    return () => {
-      clearInterval(intervalId);
-    };
+      if (data && data.objects) {
+        Object.entries(data.objects).forEach(([vesselId, positionData]) => {
+          if (Array.isArray(positionData) && positionData.length > 0) {
+            currentPositions[vesselId] =
+              positionData[positionData.length - 1];
+          } else if (
+            typeof positionData === "object" &&
+            positionData !== null
+          ) {
+            currentPositions[vesselId] = positionData as VesselDataPoint;
+          }
+        });
+      }
+
+      setLiveData(currentPositions);
+      setLastUpdated(new Date());
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred",
+      );
+      console.error("Error fetching live data:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  const { errorCount, currentInterval, retryNow } = usePolling(fetchLiveData, {
+    interval: 10000,
+    maxInterval: 60000,
+    backoffFactor: 2,
+  });
 
   // Format last updated time
   const formattedTime = lastUpdated ? lastUpdated.toLocaleTimeString() : "";
@@ -93,7 +79,17 @@ export const LivePage = () => {
       {loading && Object.keys(liveData).length === 0 && (
         <div className="loading">Loading live data...</div>
       )}
-      {error && <div className="error">Error: {error}</div>}
+      {error && (
+        <div className="error">
+          Error: {error}
+          {errorCount > 0 && (
+            <span>
+              {" "}— Retrying in {currentInterval / 1000}s...{" "}
+              <button onClick={retryNow}>Retry now</button>
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="controls-container">
         <LiveMap vesselsData={liveData} />
