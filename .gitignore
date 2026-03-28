@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 
+api_example_data/
+mock-server.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

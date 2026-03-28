@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import { Crew, useEventConfig } from "../hooks/useEventConfig";
 import { getColorBySpeed } from "../utils/wind";
@@ -21,15 +22,38 @@ const BoatPanel = ({
   onFocusBoat,
 }: BoatPanelProps) => {
   const { highlightedCrews, toggleHighlight } = useEventConfig();
+  const [hidden, setHidden] = useState(false);
+
   if (selectedBoatIds.size === 0) return null;
+
+  if (hidden) {
+    return (
+      <div className="boat-panel">
+        <button
+          className="boat-panel__toggle"
+          onClick={() => setHidden(false)}
+        >
+          Show boats ({selectedBoatIds.size})
+        </button>
+      </div>
+    );
+  }
 
   const selectedCrews = crews.filter((c) => selectedBoatIds.has(c.id));
 
   return (
     <div className="boat-panel">
-      <button className="boat-panel__close-all" onClick={onDismissAll}>
-        Close all
-      </button>
+      <div className="boat-panel__toolbar">
+        <button
+          className="boat-panel__toggle"
+          onClick={() => setHidden(true)}
+        >
+          Hide
+        </button>
+        <button className="boat-panel__close-all" onClick={onDismissAll}>
+          Close all
+        </button>
+      </div>
       {selectedCrews.map((crew) => {
         const data = vesselsData[String(crew.id)];
         const isOurs = crew.name === OUR_BOAT;

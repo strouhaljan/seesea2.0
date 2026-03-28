@@ -235,32 +235,6 @@ main {
   background: rgba(255, 255, 255, 0.4);
 }
 
-/* Vessel data tooltip styling */
-.vessel-data {
-  font-size: 11px;
-  border-collapse: collapse;
-  margin-top: 3px;
-}
-
-.vessel-data td {
-  padding: 2px 4px;
-}
-
-.vessel-data td:first-child {
-  color: #555;
-  font-weight: 500;
-  padding-right: 8px;
-}
-
-/* Let scroll/wheel events pass through popups to the map */
-.mapboxgl-popup {
-  pointer-events: none;
-}
-
-.mapboxgl-popup-content {
-  pointer-events: auto;
-}
-
 /* Map wrapper for positioning items */
 .map-wrapper {
   position: relative;
@@ -354,9 +328,15 @@ main {
   pointer-events: none;
 }
 
+.boat-panel__toolbar {
+  display: flex;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.boat-panel__toggle,
 .boat-panel__close-all {
   pointer-events: auto;
-  align-self: flex-start;
   background: rgba(26, 26, 46, 0.9);
   color: #ccc;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -366,6 +346,7 @@ main {
   cursor: pointer;
 }
 
+.boat-panel__toggle:hover,
 .boat-panel__close-all:hover {
   color: #fff;
   background: rgba(26, 26, 46, 1);

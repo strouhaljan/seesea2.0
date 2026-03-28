@@ -6,7 +6,6 @@ import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 import { useEventConfig } from "../hooks/useEventConfig";
-import { generateVesselPopupHTML } from "../utils/popupContent";
 import { MAP_STYLE, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID } from "../utils/mapConfig";
 import { OUR_BOAT } from "../config";
 
@@ -31,19 +30,14 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
   const [colorMode, setColorMode] = useState<ColorMode>("seesea");
   const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(false);
   const rootsRef = useRef<Record<string, Root>>({});
-  const popupsRef = useRef<Record<string, mapboxgl.Popup>>({});
   const hasCenteredRef = useRef(false);
-  const { crews, highlightedCrews, toggleHighlight } = useEventConfig();
+  const { crews, highlightedCrews } = useEventConfig();
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
-      map.current?.flyTo({ center: coords, zoom: 15, speed: 2 });
+      map.current?.flyTo({ center: coords, zoom: 17, speed: 2 });
     },
   }));
-
-  // Store toggleHighlight in a ref so the delegated listener always sees the latest
-  const toggleHighlightRef = useRef(toggleHighlight);
-  toggleHighlightRef.current = toggleHighlight;
 
   // Initialize map on component mount
   useEffect(() => {
@@ -60,33 +54,11 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
       setMapLoaded(true);
     });
 
-    // Close all popups when clicking on the map (not on a marker)
-    map.current.on("click", () => {
-      Object.values(popupsRef.current).forEach((p) => {
-        if (p.isOpen()) p.remove();
-      });
-    });
-
     map.current.on("zoomend", () => {
       if (map.current) saveZoom(map.current.getZoom());
     });
 
-    // Delegated click handler for highlight toggle stars in popups
-    const handlePopupClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.classList.contains("highlight-toggle")) {
-        const vesselId = target.dataset.vesselId;
-        if (vesselId) {
-          toggleHighlightRef.current(parseInt(vesselId));
-        }
-      }
-    };
-    mapContainer.current.addEventListener("click", handlePopupClick);
-
-    const container = mapContainer.current;
     return () => {
-      container.removeEventListener("click", handlePopupClick);
-
       // Clean up all React roots
       Object.values(rootsRef.current).forEach((root) => {
         try {
@@ -159,21 +131,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
             }
           />,
         );
-
-        // Also update the popup content and position with latest data
-        const popup = popupsRef.current[vesselId];
-        if (popup) {
-          popup.setHTML(generateVesselPopupHTML(
-            vesselId,
-            data,
-            crew?.track_color ?? "#fff",
-            crew?.description,
-            isHighlighted,
-          ));
-          if (popup.isOpen()) {
-            popup.setLngLat(data.coords as [number, number]);
-          }
-        }
       } else {
         // Create new marker
         const el = document.createElement("div");
@@ -201,42 +158,16 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
           />,
         );
 
-        // Add popup with vessel info
-        const popup = new mapboxgl.Popup({
-          closeButton: false,
-          closeOnClick: false,
-          offset: 25,
-        })
-          .setHTML(generateVesselPopupHTML(
-            vesselId,
-            data,
-            crew?.track_color ?? "#fff",
-            crew?.description,
-            isHighlighted,
-          ));
-
-        popupsRef.current[vesselId] = popup;
-
-        // Click handler: toggle popup + add to side panel
-        el.addEventListener("click", (e) => {
-          e.stopPropagation();
+        // Click handler to add to side panel and zoom in
+        el.addEventListener("click", () => {
           onBoatClick(parseInt(vesselId));
-          const p = popupsRef.current[vesselId];
-          if (!p || !map.current) return;
-
-          if (p.isOpen()) {
-            p.remove();
-          } else {
-            // Close all other popups
-            Object.entries(popupsRef.current).forEach(([id, other]) => {
-              if (id !== vesselId && other.isOpen()) other.remove();
-            });
-            const currentPos = markersRef.current[vesselId]?.getLngLat();
-            if (currentPos) p.setLngLat(currentPos).addTo(map.current!);
+          const pos = markersRef.current[vesselId]?.getLngLat();
+          if (pos && map.current) {
+            map.current.flyTo({ center: pos, zoom: 17, speed: 2 });
           }
         });
 
-        // Create the marker (no .setPopup — we toggle manually)
+        // Create the marker
         const marker = new mapboxgl.Marker({
           element: el,
           anchor: "center",
@@ -254,10 +185,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
       const isHighlighted = highlightedCrews.has(parseInt(vesselId));
       const shouldShow = !showOnlyHighlighted || isHighlighted;
       marker.getElement().style.display = shouldShow ? "" : "none";
-      if (!shouldShow) {
-        const p = popupsRef.current[vesselId];
-        if (p?.isOpen()) p.remove();
-      }
     });
 
     // Remove markers for vessels not in the current data
@@ -268,7 +195,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, onBoatCl
           delete rootsRef.current[id];
         }
         delete markersRef.current[id];
-        delete popupsRef.current[id];
       }
     });
 
