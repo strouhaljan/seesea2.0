@@ -330,7 +330,7 @@ main {
 
 .boat-panel__toolbar {
   display: flex;
-  gap: 4px;
+  gap: 20px;
   pointer-events: auto;
 }
 
