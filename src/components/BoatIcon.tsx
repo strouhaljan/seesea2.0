@@ -1,9 +1,13 @@
 import React from "react";
 
 import { getDirection, getColorBySpeed } from "../utils/wind";
+import type { ColorMode } from "./LiveMap";
 
 interface BoatIconProps {
   highlight?: boolean;
+  isOurs?: boolean;
+  color?: string;
+  colorMode?: ColorMode;
   rotation?: number;
   className?: string;
   windDirection?: number;
@@ -13,6 +17,9 @@ interface BoatIconProps {
 
 const BoatIcon: React.FC<BoatIconProps> = ({
   highlight = false,
+  isOurs = false,
+  color = "#392ABF",
+  colorMode = "seesea",
   rotation = 0,
   className = "",
   windDirection,
@@ -32,7 +39,8 @@ const BoatIcon: React.FC<BoatIconProps> = ({
       ? getDirection(rotation || 0, windDirection)
       : undefined;
 
-  const hullColor = getColorBySpeed(windSpeed);
+  const hullColor =
+    colorMode === "wind" ? (getColorBySpeed(windSpeed) ?? color) : color;
 
   return (
     <div style={{ position: "relative" }}>
@@ -55,7 +63,9 @@ const BoatIcon: React.FC<BoatIconProps> = ({
         C23,1.15,21.43,0.87,20.53,0.7z"
         />
         {/* Highlight */}
-        {highlight ? (
+        {isOurs ? (
+          <circle r="6" cx="12" cy="12" fill="#00bfff" stroke="#fff" strokeWidth="1.5" />
+        ) : highlight ? (
           <circle r="5" cx="12" cy="12" fill="red" />
         ) : null}
       </svg>

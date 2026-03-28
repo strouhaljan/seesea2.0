@@ -7,6 +7,8 @@
 body, html {
   height: 100%;
   width: 100%;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
 }
 
 #root {
@@ -250,38 +252,13 @@ main {
   padding-right: 8px;
 }
 
-/* Map toggle controls container */
-.map-toggle-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-end;
+/* Let scroll/wheel events pass through popups to the map */
+.mapboxgl-popup {
+  pointer-events: none;
 }
 
-/* Map toggle button */
-.wind-toggle-btn {
-  width: 36px !important;
-  height: 36px !important;
-  padding: 5px;
-  font-size: 18px;
-  cursor: pointer;
-  margin-right: 10px;
-  margin-top: 10px;
-  background-color: white;
-  border: 1px solid rgba(0,0,0,0.2);
-  border-radius: 4px;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.wind-toggle-btn:hover {
-  background-color: #f8f8f8;
-}
-
-.wind-toggle-btn.active {
-  background-color: #e0f7fa;
-  box-shadow: 0 0 0 2px rgba(0, 128, 255, 0.5);
+.mapboxgl-popup-content {
+  pointer-events: auto;
 }
 
 /* Map wrapper for positioning items */
@@ -291,43 +268,213 @@ main {
   height: 100%;
 }
 
-/* Wind legend styles */
-.wind-legend {
+/* Controls panel */
+.controls-panel {
   position: absolute;
-  bottom: 100px;
+  bottom: 30px;
   right: 10px;
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 8px 12px;
-  border-radius: 4px;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  background: rgba(26, 26, 46, 0.9);
+  color: #eee;
+  border-radius: 6px;
+  padding: 10px 14px;
   font-size: 12px;
-  z-index: 5;
-  max-width: 180px;
-}
-
-.legend-title {
-  font-weight: bold;
-  margin-bottom: 5px;
-  text-align: center;
-}
-
-.legend-scale {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
-.legend-item {
+.controls-panel__row {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
 }
 
-.legend-color {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+.controls-panel__label {
+  color: #ccc;
+  font-size: 11px;
+  white-space: nowrap;
 }
+
+/* Toggle switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch__slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #555;
+  border-radius: 20px;
+  transition: background 0.2s;
+}
+
+.toggle-switch__slider::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-switch__slider {
+  background: #4a9eff;
+}
+
+.toggle-switch input:checked + .toggle-switch__slider::before {
+  transform: translateX(16px);
+}
+
+/* Boat side panel */
+.boat-panel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+.boat-panel__close-all {
+  pointer-events: auto;
+  align-self: flex-start;
+  background: rgba(26, 26, 46, 0.9);
+  color: #ccc;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.boat-panel__close-all:hover {
+  color: #fff;
+  background: rgba(26, 26, 46, 1);
+}
+
+.boat-card {
+  background: rgba(26, 26, 46, 0.9);
+  border-left: 4px solid #fff;
+  border-radius: 4px;
+  color: #eee;
+  font-size: 12px;
+  width: 240px;
+  pointer-events: auto;
+  display: flex;
+  align-items: stretch;
+}
+
+.boat-card--ours {
+  border-left-width: 6px;
+  background: rgba(0, 60, 90, 0.9);
+}
+
+.boat-card__body {
+  flex: 1;
+  padding: 8px 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.boat-card__actions {
+  display: flex;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.boat-card__star,
+.boat-card__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.boat-card__star {
+  line-height: 1;
+  padding-bottom: 6px;
+}
+
+.boat-card__star:hover {
+  background: rgba(255, 200, 0, 0.15);
+  color: #ffd700;
+}
+
+.boat-card__star--active {
+  color: #ffd700;
+}
+
+.boat-card__close {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 4px 4px 0;
+}
+
+.boat-card__close:hover {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff4444;
+}
+
+.boat-card__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.boat-card__dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.boat-card__number {
+  margin-left: auto;
+  color: #999;
+  font-size: 11px;
+}
+
+.boat-card__desc {
+  color: #aaa;
+  font-size: 11px;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boat-card__stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.boat-card__stats--empty {
+  color: #777;
+  font-style: italic;
 }

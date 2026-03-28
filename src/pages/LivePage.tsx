@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
-import LiveMap from "../components/LiveMap";
+import LiveMap, { LiveMapHandle } from "../components/LiveMap";
+import BoatPanel from "../components/BoatPanel";
 import { usePolling } from "../hooks/usePolling";
 import { useEventConfig } from "../hooks/useEventConfig";
 
@@ -23,7 +24,43 @@ export const LivePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const { eventId } = useEventConfig();
+  const { eventId, crews, highlightedCrews } = useEventConfig();
+  const mapRef = useRef<LiveMapHandle>(null);
+
+  const [selectedBoatIds, setSelectedBoatIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const initializedRef = useRef(false);
+
+  // Show highlighted boats in the panel on load
+  useEffect(() => {
+    if (initializedRef.current || highlightedCrews.size === 0) return;
+    initializedRef.current = true;
+    setSelectedBoatIds(new Set(highlightedCrews));
+  }, [highlightedCrews]);
+
+  const handleBoatClick = useCallback((boatId: number) => {
+    setSelectedBoatIds((prev) => new Set(prev).add(boatId));
+  }, []);
+
+  const handleBoatDismiss = useCallback((boatId: number) => {
+    setSelectedBoatIds((prev) => {
+      const next = new Set(prev);
+      next.delete(boatId);
+      return next;
+    });
+  }, []);
+
+  const handleDismissAll = useCallback(() => {
+    setSelectedBoatIds(new Set());
+  }, []);
+
+  const handleFocusBoat = useCallback((boatId: number) => {
+    const data = liveData[String(boatId)];
+    if (data?.coords) {
+      mapRef.current?.flyTo(data.coords);
+    }
+  }, [liveData]);
 
   const fetchLiveData = useCallback(async () => {
     if (!eventId) return;
@@ -125,7 +162,7 @@ export const LivePage = () => {
           Connection failed: {error}
           {errorCount > 0 && (
             <span>
-              {" "}— Retrying in {secondsUntilRetry}s...{" "}
+              {" "} — Retrying in {secondsUntilRetry}s...{" "}
               <button onClick={retryNow}>Retry now</button>
             </span>
           )}
@@ -133,7 +170,19 @@ export const LivePage = () => {
       )}
 
       <div className="controls-container">
-        <LiveMap vesselsData={liveData} />
+        <LiveMap
+          ref={mapRef}
+          vesselsData={liveData}
+          onBoatClick={handleBoatClick}
+        />
+        <BoatPanel
+          crews={crews}
+          vesselsData={liveData}
+          selectedBoatIds={selectedBoatIds}
+          onDismiss={handleBoatDismiss}
+          onDismissAll={handleDismissAll}
+          onFocusBoat={handleFocusBoat}
+        />
       </div>
     </div>
   );
