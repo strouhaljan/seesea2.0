@@ -186,14 +186,7 @@ export const LivePage = () => {
         />
       </div>
 
-      {lastUpdated && !error && (
-        <div className="live-status">
-          <div className="last-updated">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-            <span className="update-badge">LIVE</span>
-          </div>
-        </div>
-      )}
+      {lastUpdated && !error && <div className="live-dot" />}
     </div>
   );
 };
