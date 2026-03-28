@@ -2,11 +2,6 @@ import { VesselDataPoint } from "../types/tripData";
 
 export type WindModel = "icon_2i" | "ecmwf";
 
-const MODEL_PARAMS: Record<WindModel, string> = {
-  icon_2i: "italia_meteo_arpae_icon_2i",
-  ecmwf: "ecmwf_ifs025",
-};
-
 // Grid covering the Adriatic from Dubrovnik to north of race area
 const GRID_BOUNDS = {
   minLat: 42.2,
@@ -45,24 +40,8 @@ export async function fetchWindGrid(model: WindModel): Promise<WindGridData> {
   const dlat = (GRID_BOUNDS.maxLat - GRID_BOUNDS.minLat) / (LAT_STEPS - 1);
   const dlng = (GRID_BOUNDS.maxLng - GRID_BOUNDS.minLng) / (LNG_STEPS - 1);
 
-  // Build coordinate pair arrays — Open-Meteo pairs lat[i] with lng[i],
-  // so we must send every grid cell as an explicit pair
-  const lats: string[] = [];
-  const lngs: string[] = [];
-  for (let row = 0; row < LAT_STEPS; row++) {
-    for (let col = 0; col < LNG_STEPS; col++) {
-      lats.push((GRID_BOUNDS.minLat + row * dlat).toFixed(2));
-      lngs.push((GRID_BOUNDS.minLng + col * dlng).toFixed(2));
-    }
-  }
-
-  const url =
-    `https://api.open-meteo.com/v1/forecast?` +
-    `latitude=${lats.join(",")}&longitude=${lngs.join(",")}` +
-    `&hourly=wind_speed_10m,wind_direction_10m` +
-    `&models=${MODEL_PARAMS[model]}&forecast_hours=1`;
-
-  const response = await fetch(url);
+  // Fetch from our server (which caches the Open-Meteo response)
+  const response = await fetch(`/api/wind/${model}`);
   if (!response.ok) throw new Error(`Wind API error: ${response.status}`);
 
   const data = await response.json();
