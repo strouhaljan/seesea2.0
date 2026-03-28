@@ -4,6 +4,7 @@ interface UsePollingOptions {
   interval?: number;
   maxInterval?: number;
   backoffFactor?: number;
+  enabled?: boolean;
 }
 
 interface UsePollingReturn {
@@ -20,6 +21,7 @@ export function usePolling(
     interval = 10000,
     maxInterval = 60000,
     backoffFactor = 2,
+    enabled = true,
   } = options;
 
   const [errorCount, setErrorCount] = useState(0);
@@ -82,9 +84,10 @@ export function usePolling(
   }, [interval, clearScheduled, poll]);
 
   useEffect(() => {
+    if (!enabled) return;
     poll();
     return clearScheduled;
-  }, [poll, clearScheduled]);
+  }, [enabled, poll, clearScheduled]);
 
   return { errorCount, secondsUntilRetry, retryNow };
 }
