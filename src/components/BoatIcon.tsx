@@ -37,7 +37,7 @@ const BoatIcon: React.FC<BoatIconProps> = ({
   }
   // Format wind speed to one decimal place if available
   const formattedWindSpeed =
-    windSpeed !== undefined ? windSpeed.toFixed(1) : "";
+    windSpeed != null ? windSpeed.toFixed(1) : "";
 
   // Calculate wind arrow rotation based on TWA if provided, otherwise use windDirection
   const arrowRotation =
