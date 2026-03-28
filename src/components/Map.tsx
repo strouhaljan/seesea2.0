@@ -3,12 +3,13 @@ import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
 import { generateColorFromId } from "../utils/svgGenerator";
+import { generateVesselPopupHTML } from "../utils/popupContent";
+import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "../utils/mapConfig";
 import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 
-mapboxgl.accessToken =
-  "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface MapProps {
   vesselsData: Record<string, VesselDataPoint[]>;
@@ -29,9 +30,9 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/dark-v11",
-      center: [15.5, 43.8],
-      zoom: 9,
+      style: MAP_STYLE,
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
     });
 
     map.current.on("load", () => {
@@ -148,7 +149,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
 
         // Initial popup content including wind data if available
         const firstPoint = trackData[0];
-        const initialPopupContent = generatePopupContent(
+        const initialPopupContent = generateVesselPopupHTML(
           vesselId,
           firstPoint,
           vesselColor,
@@ -177,48 +178,6 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
       });
     }
   }, [mapLoaded, vesselsData]);
-
-  // Generate popup content with all available data
-  const generatePopupContent = (
-    vesselId: string,
-    point: VesselDataPoint,
-    vesselColor: string,
-  ): string => {
-    // Add heading if available, otherwise use COG if available
-    let headingInfo = "";
-    if (point.hdg !== undefined) {
-      headingInfo = `<div>Heading: ${point.hdg}°</div>`;
-    } else if (point.cog !== undefined) {
-      headingInfo = `<div>Course: ${point.cog}°</div>`;
-    }
-
-    // Add speed if available
-    const speedInfo =
-      point.sog !== undefined
-        ? `<div>Speed: ${point.sog?.toFixed(1) ?? "-"} kn</div>`
-        : "";
-
-    // Add wind data if available
-    let windInfo = "";
-    if (point.twa !== undefined && point.tws !== undefined) {
-      // Display TWA with port/starboard indication
-      const twaDirection = point.twa < 0 ? "Port" : "Starboard";
-      const twaAbsolute = Math.abs(point.twa);
-      windInfo = `
-        <div>Wind angle: ${twaAbsolute}° ${twaDirection}</div>
-        <div>Wind speed: ${point.tws?.toFixed(1) ?? "-"} kn</div>
-      `;
-    }
-
-    return `
-      <div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
-        <strong>Vessel ID: ${vesselId}</strong>
-        ${headingInfo}
-        ${speedInfo}
-        ${windInfo}
-      </div>
-    `;
-  };
 
   // Update all vessel markers when currentPointIndex changes
   useEffect(() => {
@@ -263,7 +222,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         const popup = popupsRef.current[vesselId];
         if (popup) {
           const vesselColor = generateColorFromId(vesselId);
-          const popupContent = generatePopupContent(
+          const popupContent = generateVesselPopupHTML(
             vesselId,
             currentPoint,
             vesselColor,

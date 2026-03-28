@@ -8,10 +8,10 @@ import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 import { crewList } from "../crewList";
-import { getColorBySpeed } from "../utils/wind";
+import { generateVesselPopupHTML } from "../utils/popupContent";
+import { MAP_STYLE, DEFAULT_CENTER, DEFAULT_ZOOM } from "../utils/mapConfig";
 
-mapboxgl.accessToken =
-  "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface LiveMapProps {
   vesselsData: Record<string, VesselDataPoint>;
@@ -69,9 +69,9 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/dark-v11",
-      center: [15.5, 43.8], // Initial center position (will be adjusted based on data)
-      zoom: 9,
+      style: MAP_STYLE,
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
     });
 
     map.current.on("load", () => {
@@ -282,66 +282,12 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
 
         // Also update the popup content with latest data
         const vesselColor = generateColorFromId(vesselId);
-        marker.getPopup()
-          .setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
-          <strong>Vessel ID: ${vesselId}</strong>
-          <table class="vessel-data">
-          <tr>
-              <td>Crew:</td>
-              <td>${
-                crewList.find((crew) => crew.id === parseInt(vesselId))
-                  ?.description
-              }</td>
-            </tr>
-            <tr>
-              <td>Speed:</td>
-              <td>${data.sog?.toFixed(1) || "?"} knots</td>
-            </tr>
-            ${
-              data.twa !== undefined && data.twa !== null
-                ? `
-            <tr>
-              <td>Wind Direction:</td>
-              <td>${
-                data.twa !== null && data.twa !== undefined
-                  ? data.twa.toFixed(1)
-                  : "?"
-              }°</td>
-            </tr>`
-                : ""
-            }
-            ${
-              data.tws !== undefined && data.tws !== null
-                ? `
-            <tr>
-              <td>Wind Speed:</td>
-              <td>
-                <span style="color: ${
-                  data.tws !== null && data.tws !== undefined
-                    ? getColorBySpeed(data.tws)
-                    : "#000000"
-                }; font-weight: bold;">
-                  ${
-                    data.tws !== null && data.tws !== undefined
-                      ? data.tws.toFixed(1)
-                      : "?"
-                  }
-                </span> knots
-              </td>
-            </tr>
-             <tr>
-              <td>Heading:</td>
-              <td>${
-                data.hdg !== null && data.hdg !== undefined
-                  ? data.hdg.toFixed(1)
-                  : "?"
-              } deg</td>
-            </tr>
-            `
-                : ""
-            }
-          </table>
-        </div>`);
+        marker.getPopup().setHTML(generateVesselPopupHTML(
+          vesselId,
+          data,
+          vesselColor,
+          crewList.find((crew) => crew.id === parseInt(vesselId))?.description,
+        ));
       } else {
         // Create new marker
         const el = document.createElement("div");
@@ -379,57 +325,12 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
           closeOnClick: false,
           offset: 25,
         })
-          .setHTML(`<div style="border-left: 4px solid ${vesselColor}; padding-left: 6px;">
-          <strong>Vessel ID: ${vesselId}</strong>
-          <table class="vessel-data">
-            <tr>
-              <td>Speed:</td>
-              <td>${data.sog?.toFixed(1) || "?"} knots</td>
-            </tr>
-            ${
-              data.twa !== undefined && data.twa !== null
-                ? `
-            <tr>
-              <td>Wind Direction:</td>
-              <td>${
-                data.twa !== null && data.twa !== undefined
-                  ? data.twa.toFixed(1)
-                  : "?"
-              }°</td>
-            </tr>`
-                : ""
-            }
-            ${
-              data.tws !== undefined && data.tws !== null
-                ? `
-            <tr>
-              <td>Wind Speed:</td>
-              <td>
-                <span style="color: ${
-                  data.tws !== null && data.tws !== undefined
-                    ? getColorBySpeed(data.tws)
-                    : "#000000"
-                }; font-weight: bold;">
-                  ${
-                    data.tws !== null && data.tws !== undefined
-                      ? data.tws.toFixed(1)
-                      : "?"
-                  }
-                </span> knots
-              </td>
-            </tr>
-             <tr>
-              <td>Heading:</td>
-              <td>${
-                data.hdg !== null && data.hdg !== undefined
-                  ? data.hdg.toFixed(1)
-                  : "?"
-              } deg</td>
-            </tr>`
-                : ""
-            }
-          </table>
-        </div>`);
+          .setHTML(generateVesselPopupHTML(
+            vesselId,
+            data,
+            vesselColor,
+            crewList.find((crew) => crew.id === parseInt(vesselId))?.description,
+          ));
 
         // Create the marker
         const marker = new mapboxgl.Marker({
