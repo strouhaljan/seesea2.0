@@ -7,8 +7,7 @@ import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 
-mapboxgl.accessToken =
-  "pk.eyJ1IjoiaG9uemFzdHIiLCJhIjoiY2xnN3Zmc3RxMHJoODNtcDg4Zm1vZzVuMyJ9.m-gOOGzuPjmaSCfoJEy90g";
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 interface MapProps {
   vesselsData: Record<string, VesselDataPoint[]>;
