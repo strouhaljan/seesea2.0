@@ -20,7 +20,7 @@ function App() {
           flexDirection: "row",
         }}
       >
-        <h1>VR map</h1>
+        <h1>SeeSea <sup>2.0</sup></h1>
         <nav className="main-nav">
           <Link
             to="/"
