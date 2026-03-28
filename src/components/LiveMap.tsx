@@ -344,7 +344,7 @@ const LiveMap = ({ vesselsData }: LiveMapProps) => {
         // Add popup with vessel info, color, and wind data
         const popup = new mapboxgl.Popup({
           closeButton: false,
-          closeOnClick: false,
+          closeOnClick: true,
           offset: 25,
         })
           .setHTML(generateVesselPopupHTML(

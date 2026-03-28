@@ -159,7 +159,7 @@ const Map = ({ vesselsData, currentPointIndex }: MapProps) => {
         // Create popup and store it in the ref
         const popup = new mapboxgl.Popup({
           closeButton: false,
-          closeOnClick: false,
+          closeOnClick: true,
           offset: 25,
         });
 
