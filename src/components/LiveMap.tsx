@@ -11,6 +11,7 @@ import { OUR_BOAT } from "../config";
 import { WindOverlay } from "./WindOverlay";
 import { fetchWindGrid, blendBoatData, WindModel } from "../utils/windGrid";
 import { TailsData } from "../hooks/useTails";
+import { LegMarker } from "../hooks/useLegMarkers";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -22,6 +23,19 @@ const FUTURE_LINE_LAYER = "future-position-lines-layer";
 const TAIL_LINE_SOURCE = "tail-lines";
 const TAIL_LINE_LAYER = "tail-lines-layer";
 const TRAIL_STEPS = [15, 30, 60, 120, 180]; // minutes
+const LEG_LINE_SOURCE = "leg-lines";
+const LEG_LINE_LAYER = "leg-lines-layer";
+const LEG_POINT_SOURCE = "leg-points";
+const LEG_POINT_LAYER = "leg-points-layer";
+const LEG_LABEL_LAYER = "leg-labels-layer";
+
+const LEG_MARKER_COLORS: Record<string, string> = {
+  start: "#00cc44",
+  finish: "#cc0000",
+  line: "#ff8800",
+  buoy: "#ffcc00",
+  dtf: "#8888ff",
+};
 
 /** Calculate a future position given current coords, speed (knots), and course (degrees from north). */
 function futurePosition(
@@ -46,6 +60,7 @@ interface LiveMapProps {
   vesselsData: Record<string, VesselDataPoint>;
   tails: TailsData;
   trackLengthMax: number;
+  legMarkers: LegMarker[];
   activeBoatId: number | null;
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
@@ -53,7 +68,7 @@ interface LiveMapProps {
   onToggleControls: () => void;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive, controlsOpen, onToggleControls }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, legMarkers, activeBoatId, onBoatClick, onClearActive, controlsOpen, onToggleControls }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -518,6 +533,96 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       });
     }
 
+    // --- Leg course markers (start, finish, restricted zones, buoys) ---
+    const legLineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+    const legPointFeatures: GeoJSON.Feature<GeoJSON.Point>[] = [];
+
+    for (const m of legMarkers) {
+      const color = LEG_MARKER_COLORS[m.marker_type] || "#ffffff";
+
+      if (m.lat_2 != null && m.lon_2 != null) {
+        // Line markers: start, finish, restricted zones
+        legLineFeatures.push({
+          type: "Feature",
+          properties: { color, name: m.name, marker_type: m.marker_type },
+          geometry: {
+            type: "LineString",
+            coordinates: [[m.lon, m.lat], [m.lon_2, m.lat_2]],
+          },
+        });
+      } else {
+        // Point markers: buoys, DTF
+        legPointFeatures.push({
+          type: "Feature",
+          properties: { color, name: m.name, marker_type: m.marker_type },
+          geometry: {
+            type: "Point",
+            coordinates: [m.lon, m.lat],
+          },
+        });
+      }
+    }
+
+    const legLineData: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: legLineFeatures,
+    };
+    const legPointData: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: legPointFeatures,
+    };
+
+    const existingLegLineSource = map.current.getSource(LEG_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+    if (existingLegLineSource) {
+      existingLegLineSource.setData(legLineData);
+    } else {
+      map.current.addSource(LEG_LINE_SOURCE, { type: "geojson", data: legLineData });
+      map.current.addLayer({
+        id: LEG_LINE_LAYER,
+        type: "line",
+        source: LEG_LINE_SOURCE,
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 3,
+          "line-opacity": 0.9,
+        },
+      });
+    }
+
+    const existingLegPointSource = map.current.getSource(LEG_POINT_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+    if (existingLegPointSource) {
+      existingLegPointSource.setData(legPointData);
+    } else {
+      map.current.addSource(LEG_POINT_SOURCE, { type: "geojson", data: legPointData });
+      map.current.addLayer({
+        id: LEG_POINT_LAYER,
+        type: "circle",
+        source: LEG_POINT_SOURCE,
+        paint: {
+          "circle-radius": 6,
+          "circle-color": ["get", "color"],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+      map.current.addLayer({
+        id: LEG_LABEL_LAYER,
+        type: "symbol",
+        source: LEG_POINT_SOURCE,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-size": 12,
+          "text-offset": [0, 1.5],
+          "text-anchor": "top",
+        },
+        paint: {
+          "text-color": "#ffffff",
+          "text-halo-color": "#000000",
+          "text-halo-width": 1,
+        },
+      });
+    }
+
     // Center on target vessel on first load with data
     if (!hasCenteredRef.current && Object.keys(markersRef.current).length > 0) {
       hasCenteredRef.current = true;
@@ -528,7 +633,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes]);
+  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes, legMarkers]);
 
 
   return (

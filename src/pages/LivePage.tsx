@@ -5,6 +5,7 @@ import BoatPanel from "../components/BoatPanel";
 import { usePolling } from "../hooks/usePolling";
 import { useEventConfig } from "../hooks/useEventConfig";
 import { useTails } from "../hooks/useTails";
+import { useLegMarkers } from "../hooks/useLegMarkers";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -47,6 +48,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   }, [legs]);
 
   const { tails, trackLengthMax } = useTails(eventId, activeLegId);
+  const legMarkers = useLegMarkers(eventId, activeLegId);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
 
   const handleBoatClick = useCallback((boatId: number) => {
@@ -169,6 +171,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           vesselsData={liveData}
           tails={tails}
           trackLengthMax={trackLengthMax}
+          legMarkers={legMarkers}
           activeBoatId={activeBoatId}
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}

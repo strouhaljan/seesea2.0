@@ -6,6 +6,7 @@ import liveRouter from "./routes/live.js";
 import historyRouter from "./routes/history.js";
 import windRouter from "./routes/wind.js";
 import tailsRouter from "./routes/tails.js";
+import legRouter from "./routes/leg.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
@@ -23,6 +24,7 @@ app.use("/api/live", liveRouter);
 app.use("/api/history", historyRouter);
 app.use("/api/wind", windRouter);
 app.use("/api/tails", tailsRouter);
+app.use("/api/leg", legRouter);
 
 app.listen(PORT, () => {
   console.log(`SeeSea server listening on port ${PORT}`);
