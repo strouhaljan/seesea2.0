@@ -49,9 +49,10 @@ interface LiveMapProps {
   activeBoatId: number | null;
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
+  isHistoryMode?: boolean;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive, isHistoryMode = false }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -333,7 +334,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     // Build GeoJSON lines for all vessels
     const lineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
 
-    if (futureMinutes > 0) {
+    if (futureMinutes > 0 && !isHistoryMode) {
       Object.entries(vesselsData).forEach(([vesselId, data]) => {
         if (!data.coords || !data.sog || data.sog <= 0) return;
 
@@ -470,7 +471,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes]);
+  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes, isHistoryMode]);
 
   return (
     <div className="map-wrapper">
