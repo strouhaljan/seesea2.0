@@ -90,7 +90,12 @@ export function useHistoryData(
       return;
     }
 
-    fetchData(selectedTime, trailMinutes);
+    // Debounce: wait for rapid changes (e.g. holding step buttons) to settle
+    const timeout = setTimeout(() => {
+      fetchData(selectedTime, trailMinutes);
+    }, 300);
+
+    return () => clearTimeout(timeout);
   }, [selectedTime, trailMinutes, fetchData]);
 
   return { historyData, historyTails, loading };
