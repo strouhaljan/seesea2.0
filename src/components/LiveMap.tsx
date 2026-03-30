@@ -6,7 +6,7 @@ import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 import { useEventConfig } from "../hooks/useEventConfig";
-import { MAP_STYLE, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID } from "../utils/mapConfig";
+import { MAP_STYLES, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID, getSavedTheme, saveTheme, MapTheme } from "../utils/mapConfig";
 import { OUR_BOAT } from "../config";
 import { WindOverlay } from "./WindOverlay";
 import { fetchWindGrid, blendBoatData, WindModel } from "../utils/windGrid";
@@ -77,6 +77,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
   const [trailMinutes, setTrailMinutes] = useState(
     () => parseInt(localStorage.getItem("trailMinutes") || "0", 10)
   );
+  const [mapTheme, setMapTheme] = useState<MapTheme>(getSavedTheme);
   const rootsRef = useRef<Record<string, Root>>({});
   const futureMarkersRef = useRef<Record<string, Marker>>({});
   const futureRootsRef = useRef<Record<string, Root>>({});
@@ -113,6 +114,23 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     localStorage.setItem("trailMinutes", String(trailMinutes));
   }, [trailMinutes]);
 
+  // Switch map style when theme changes
+  useEffect(() => {
+    saveTheme(mapTheme);
+    document.documentElement.setAttribute("data-theme", mapTheme);
+    if (!map.current) return;
+    // setStyle removes all custom sources/layers — set mapLoaded to false
+    // so the vessel-update effect re-adds them after the new style loads
+    setMapLoaded(false);
+    map.current.once("style.load", () => setMapLoaded(true));
+    map.current.setStyle(MAP_STYLES[mapTheme]);
+  }, [mapTheme]);
+
+  // Set initial data-theme attribute
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", mapTheme);
+  }, []);
+
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
       map.current?.flyTo({ center: coords, zoom: 17, speed: 2 });
@@ -125,7 +143,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: MAP_STYLE,
+      style: MAP_STYLES[getSavedTheme()],
       center: DEFAULT_CENTER,
       zoom: getSavedZoom(),
       dragRotate: false,
@@ -509,6 +527,33 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       <div ref={mapContainer} className="map-container" />
 
       <div className="controls-stack">
+        <button
+          className="map-theme-btn"
+          title={mapTheme === "dark" ? "Switch to light map" : "Switch to dark map"}
+          onClick={() => setMapTheme(mapTheme === "dark" ? "light" : "dark")}
+        >
+          {mapTheme === "dark" ? (
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="4" fill="#eee" />
+              <g stroke="#eee" strokeWidth="1.5" strokeLinecap="round">
+                <line x1="10" y1="1" x2="10" y2="3.5" />
+                <line x1="10" y1="16.5" x2="10" y2="19" />
+                <line x1="1" y1="10" x2="3.5" y2="10" />
+                <line x1="16.5" y1="10" x2="19" y2="10" />
+                <line x1="3.6" y1="3.6" x2="5.4" y2="5.4" />
+                <line x1="14.6" y1="14.6" x2="16.4" y2="16.4" />
+                <line x1="3.6" y1="16.4" x2="5.4" y2="14.6" />
+                <line x1="14.6" y1="5.4" x2="16.4" y2="3.6" />
+              </g>
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M10 3a7 7 0 1 0 7 7 5 5 0 0 1-7-7Z" fill="#555" />
+            </svg>
+          )}
+        </button>
+
+
         <div className="controls-panel">
           <div className="controls-panel__row">
             <span className="controls-panel__label">SeeSea</span>
