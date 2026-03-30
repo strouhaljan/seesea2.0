@@ -530,23 +530,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     }
   }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes]);
 
-  // Swipe right on controls panel to close
-  const controlsTouchRef = useRef<{ startX: number; startY: number } | null>(null);
-  const handleControlsTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    controlsTouchRef.current = { startX: touch.clientX, startY: touch.clientY };
-  }, []);
-  const handleControlsTouchEnd = useCallback((e: React.TouchEvent) => {
-    const ref = controlsTouchRef.current;
-    if (!ref) return;
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - ref.startX;
-    const dy = Math.abs(touch.clientY - ref.startY);
-    controlsTouchRef.current = null;
-    if (dx > 60 && dx > dy && controlsOpen) {
-      onToggleControls();
-    }
-  }, [controlsOpen, onToggleControls]);
 
   return (
     <div className="map-wrapper">
@@ -555,8 +538,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       <div className="controls-stack">
         <div
           className={`controls-panel ${controlsOpen ? "" : "controls-panel--hidden"}`}
-          onTouchStart={handleControlsTouchStart}
-          onTouchEnd={handleControlsTouchEnd}
         >
           <div className="controls-panel__row">
             <span className="controls-panel__label">SeeSea</span>
