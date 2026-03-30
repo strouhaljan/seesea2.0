@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import LiveMap, { LiveMapHandle } from "../components/LiveMap";
 import BoatPanel from "../components/BoatPanel";
+import HistorySlider from "../components/HistorySlider";
 import { usePolling } from "../hooks/usePolling";
 import { useEventConfig } from "../hooks/useEventConfig";
 import { useTails } from "../hooks/useTails";
 import { useLegMarkers } from "../hooks/useLegMarkers";
+import { useHistoryData } from "../hooks/useHistoryData";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -37,19 +39,38 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   const mapRef = useRef<LiveMapHandle>(null);
 
   // Pick the current active leg for tails (last active leg by start date)
-  const activeLegId = useMemo(() => {
+  const activeLeg = useMemo(() => {
     const active = legs.filter((l) => l.active === 1);
     if (active.length === 0) return null;
     const now = Date.now();
     const current = active.find(
       (l) => new Date(l.start).getTime() <= now && new Date(l.end).getTime() >= now,
     );
-    return (current ?? active[0]).id;
+    return current ?? active[0];
   }, [legs]);
+
+  const activeLegId = activeLeg?.id ?? null;
+  const legStartTime = activeLeg ? Math.floor(new Date(activeLeg.start).getTime() / 1000) : 0;
+  const nowTime = Math.floor(Date.now() / 1000);
 
   const { tails, trackLengthMax } = useTails(eventId, activeLegId);
   const legMarkers = useLegMarkers(eventId, activeLegId);
+  const [selectedTime, setSelectedTime] = useState<number | null>(null);
+  const [trailMinutes, setTrailMinutes] = useState(
+    () => parseInt(localStorage.getItem("trailMinutes") || "0", 10),
+  );
+  const { historyData, historyTails } = useHistoryData(eventId, selectedTime, trailMinutes, legStartTime);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
+
+  // Sync trailMinutes from localStorage (LiveMap dispatches trailMinutesChanged)
+  useEffect(() => {
+    const handler = () => setTrailMinutes(parseInt(localStorage.getItem("trailMinutes") || "0", 10));
+    window.addEventListener("trailMinutesChanged", handler);
+    return () => window.removeEventListener("trailMinutesChanged", handler);
+  }, []);
+
+  const isHistoryMode = selectedTime !== null;
+  const displayData = isHistoryMode && Object.keys(historyData).length > 0 ? historyData : liveData;
 
   const handleBoatClick = useCallback((boatId: number) => {
     setActiveBoatId(boatId);
@@ -61,11 +82,11 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   }, []);
 
   const handleFocusBoat = useCallback((boatId: number) => {
-    const data = liveData[String(boatId)];
+    const data = displayData[String(boatId)];
     if (data?.coords) {
       mapRef.current?.flyTo(data.coords);
     }
-  }, [liveData]);
+  }, [displayData]);
 
   const fetchLiveData = useCallback(async () => {
     if (!eventId) return;
@@ -168,19 +189,20 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
       <div className="controls-container">
         <LiveMap
           ref={mapRef}
-          vesselsData={liveData}
-          tails={tails}
+          vesselsData={displayData}
+          tails={isHistoryMode ? historyTails : tails}
           trackLengthMax={trackLengthMax}
           legMarkers={legMarkers}
           activeBoatId={activeBoatId}
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}
+          isHistoryMode={isHistoryMode}
           controlsOpen={controlsOpen}
           onToggleControls={onToggleControls}
         />
         <BoatPanel
           crews={crews}
-          vesselsData={liveData}
+          vesselsData={displayData}
           activeBoatId={activeBoatId}
           collapsed={panelCollapsed}
           onToggleCollapsed={onTogglePanel}
@@ -189,7 +211,14 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
         />
       </div>
 
-      {lastUpdated && !error && <div className="live-dot" />}
+      {lastUpdated && !error && !isHistoryMode && <div className="live-dot" />}
+
+      <HistorySlider
+        startTime={legStartTime}
+        endTime={nowTime}
+        currentTime={selectedTime}
+        onTimeChange={setSelectedTime}
+      />
     </div>
   );
 };
