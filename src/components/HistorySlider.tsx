@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatDate } from "../utils/dateUtils";
 import "./HistorySlider.css";
 
@@ -27,12 +27,20 @@ function useRepeatAction(action: () => void) {
     intervalRef.current = setInterval(action, 250);
   }, [action, stop]);
 
+  // Safety net: clear interval on unmount
+  useEffect(() => () => clearInterval(intervalRef.current), []);
+
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
     start();
   }, [start]);
 
-  return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop, onTouchStart, onTouchEnd: stop };
+  const onContextMenu = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    stop();
+  }, [stop]);
+
+  return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop, onTouchStart, onTouchEnd: stop, onContextMenu };
 }
 
 const HistorySlider = ({
