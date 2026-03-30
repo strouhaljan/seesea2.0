@@ -553,33 +553,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       <div ref={mapContainer} className="map-container" />
 
       <div className="controls-stack">
-        <button
-          className="map-theme-btn"
-          title={mapTheme === "dark" ? "Switch to light map" : "Switch to dark map"}
-          onClick={() => setMapTheme(mapTheme === "dark" ? "light" : "dark")}
-        >
-          {mapTheme === "dark" ? (
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="10" r="4" fill="#eee" />
-              <g stroke="#eee" strokeWidth="1.5" strokeLinecap="round">
-                <line x1="10" y1="1" x2="10" y2="3.5" />
-                <line x1="10" y1="16.5" x2="10" y2="19" />
-                <line x1="1" y1="10" x2="3.5" y2="10" />
-                <line x1="16.5" y1="10" x2="19" y2="10" />
-                <line x1="3.6" y1="3.6" x2="5.4" y2="5.4" />
-                <line x1="14.6" y1="14.6" x2="16.4" y2="16.4" />
-                <line x1="3.6" y1="16.4" x2="5.4" y2="14.6" />
-                <line x1="14.6" y1="5.4" x2="16.4" y2="3.6" />
-              </g>
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <path d="M10 3a7 7 0 1 0 7 7 5 5 0 0 1-7-7Z" fill="#555" />
-            </svg>
-          )}
-        </button>
-
-
         <div
           className={`controls-panel ${controlsOpen ? "" : "controls-panel--hidden"}`}
           onTouchStart={handleControlsTouchStart}
@@ -695,6 +668,19 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             </div>
           </>
           )}
+        <div className="controls-panel__divider" />
+        <div className="controls-panel__row">
+          <span className="controls-panel__label">Dark</span>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={mapTheme === "light"}
+              onChange={() => setMapTheme(mapTheme === "dark" ? "light" : "dark")}
+            />
+            <span className="toggle-switch__slider" />
+          </label>
+          <span className="controls-panel__label">Light</span>
+        </div>
         </div>
       </div>
     </div>
