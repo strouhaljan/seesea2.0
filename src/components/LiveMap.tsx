@@ -82,7 +82,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
   const futureMarkersRef = useRef<Record<string, Marker>>({});
   const futureRootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
-  const [mapRotated, setMapRotated] = useState(false);
+  const vesselsSnapshotRef = useRef<{ data: Record<string, VesselDataPoint>; receivedAt: number }>({ data: {}, receivedAt: 0 });
   const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
 
@@ -146,7 +146,12 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       style: MAP_STYLES[getSavedTheme()],
       center: DEFAULT_CENTER,
       zoom: getSavedZoom(),
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
     });
+
+    map.current.touchZoomRotate.disableRotation();
 
     map.current.on("load", () => {
       setMapLoaded(true);
@@ -159,15 +164,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     map.current.on("click", () => {
       onClearActive();
     });
-
-    const onMoveEnd = () => {
-      if (!map.current) return;
-      const bearing = map.current.getBearing();
-      const pitch = map.current.getPitch();
-      setMapRotated(Math.abs(bearing) > 0.5 || pitch > 0.5);
-    };
-    map.current.on("moveend", onMoveEnd);
-    map.current.on("pitchend", onMoveEnd);
 
     return () => {
       // Clean up all React roots
@@ -219,6 +215,37 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       windOverlayRef.current?.hide();
     };
   }, [mapLoaded, showWind, windModel, blendBoats, vesselsData]);
+
+  // Snapshot vessel data with receive timestamp for interpolation
+  useEffect(() => {
+    if (Object.keys(vesselsData).length > 0) {
+      vesselsSnapshotRef.current = { data: vesselsData, receivedAt: performance.now() };
+    }
+  }, [vesselsData]);
+
+  // Animate marker positions between data updates using SOG/COG projection
+  useEffect(() => {
+    if (!mapLoaded) return;
+    let raf = 0;
+    const tick = () => {
+      const { data, receivedAt } = vesselsSnapshotRef.current;
+      if (receivedAt > 0) {
+        const elapsedMin = (performance.now() - receivedAt) / 60_000;
+        for (const [id, vessel] of Object.entries(data)) {
+          const marker = markersRef.current[id];
+          if (!marker || !vessel.coords) continue;
+          const cog = vessel.cog || vessel.hdg || 0;
+          const sog = vessel.sog || 0;
+          if (sog > 0 && cog) {
+            marker.setLngLat(futurePosition(vessel.coords, sog, cog, elapsedMin));
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [mapLoaded]);
 
   // Update markers based on live data
   useEffect(() => {
@@ -500,21 +527,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       <div ref={mapContainer} className="map-container" />
 
       <div className="controls-stack">
-        {mapRotated && (
-          <button
-            className="map-reset-btn"
-            title="Reset north &amp; tilt"
-            onClick={() => {
-              map.current?.easeTo({ bearing: 0, pitch: 0, duration: 400 });
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18">
-              <polygon points="9,1 12,8 9,6.5 6,8" fill="#e55" />
-              <polygon points="9,17 6,10 9,11.5 12,10" fill="#ccc" />
-            </svg>
-          </button>
-        )}
-
         <button
           className="map-theme-btn"
           title={mapTheme === "dark" ? "Switch to light map" : "Switch to dark map"}
@@ -540,6 +552,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             </svg>
           )}
         </button>
+
 
         <div className="controls-panel">
           <div className="controls-panel__row">
