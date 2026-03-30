@@ -308,6 +308,11 @@ main {
   align-items: flex-end;
   gap: 6px;
   overflow: clip;
+  pointer-events: none;
+}
+
+.controls-stack > * {
+  pointer-events: auto;
 }
 
 /* Controls panel */
