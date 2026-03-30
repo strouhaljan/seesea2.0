@@ -20,19 +20,19 @@
 }
 
 [data-theme="light"] {
-  --panel-bg: rgba(255, 255, 255, 0.92);
+  --panel-bg: #ffffff;
   --panel-bg-solid: #ffffff;
   --panel-text: #1a1a2e;
-  --panel-text-muted: #444;
-  --panel-text-dim: #666;
-  --panel-text-faint: #888;
-  --panel-border: rgba(0, 0, 0, 0.1);
-  --panel-input-bg: rgba(0, 0, 0, 0.1);
-  --panel-input-focus-bg: rgba(0, 0, 0, 0.15);
-  --panel-input-border: rgba(0, 0, 0, 0.25);
+  --panel-text-muted: #333;
+  --panel-text-dim: #555;
+  --panel-text-faint: #777;
+  --panel-border: rgba(0, 0, 0, 0.15);
+  --panel-input-bg: #ededed;
+  --panel-input-focus-bg: #e2e2e2;
+  --panel-input-border: rgba(0, 0, 0, 0.3);
   --panel-hover: rgba(0, 0, 0, 0.08);
-  --card-ours-bg: rgba(0, 100, 150, 0.25);
-  --card-active-bg: rgba(0, 80, 150, 0.15);
+  --card-ours-bg: #dceef7;
+  --card-active-bg: #d0e4f0;
   --card-active-outline: rgba(0, 80, 150, 0.5);
   --card-active-shadow: rgba(0, 0, 0, 0.15);
   --scrollbar-thumb: rgba(0, 0, 0, 0.15);
