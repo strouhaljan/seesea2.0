@@ -6,6 +6,7 @@ import HistorySlider from "../components/HistorySlider";
 import { usePolling } from "../hooks/usePolling";
 import { useEventConfig } from "../hooks/useEventConfig";
 import { useTails } from "../hooks/useTails";
+import { useLegMarkers } from "../hooks/useLegMarkers";
 import { useHistoryData } from "../hooks/useHistoryData";
 
 interface LiveData {
@@ -53,6 +54,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   const nowTime = Math.floor(Date.now() / 1000);
 
   const { tails, trackLengthMax } = useTails(eventId, activeLegId);
+  const legMarkers = useLegMarkers(eventId, activeLegId);
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
   const [trailMinutes, setTrailMinutes] = useState(
     () => parseInt(localStorage.getItem("trailMinutes") || "0", 10),
@@ -190,6 +192,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           vesselsData={displayData}
           tails={isHistoryMode ? historyTails : tails}
           trackLengthMax={trackLengthMax}
+          legMarkers={legMarkers}
           activeBoatId={activeBoatId}
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}

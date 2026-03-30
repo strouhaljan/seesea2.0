@@ -5,6 +5,7 @@ import eventRouter from "./routes/event.js";
 import liveRouter from "./routes/live.js";
 import windRouter from "./routes/wind.js";
 import tailsRouter from "./routes/tails.js";
+import legRouter from "./routes/leg.js";
 import data2Router from "./routes/data2.js";
 
 const app = express();
@@ -22,6 +23,7 @@ app.use("/api/event", eventRouter);
 app.use("/api/live", liveRouter);
 app.use("/api/wind", windRouter);
 app.use("/api/tails", tailsRouter);
+app.use("/api/leg", legRouter);
 app.use("/api/data2", data2Router);
 
 app.listen(PORT, () => {
