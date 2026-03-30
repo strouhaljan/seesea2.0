@@ -1,4 +1,6 @@
 import { Router } from "express";
+import Database from "better-sqlite3";
+import { resolve } from "node:path";
 
 interface DataPoint {
   time: number;
@@ -47,10 +49,51 @@ interface CacheChunk {
   fetchedAt: number;
 }
 
-// Cache keyed by "eventId:hourStart" — each chunk covers 1 hour
-const chunkCache = new Map<string, CacheChunk>();
-// Historical chunks never expire; the "current" hour chunk refreshes periodically
+// --- SQLite persistence ---
+const dbPath = resolve(process.env.CACHE_DB_PATH ?? resolve(__dirname, "../../cache.db"));
+const db = new Database(dbPath);
+db.pragma("journal_mode = WAL");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS chunks (
+    event_id TEXT NOT NULL,
+    hour_start INTEGER NOT NULL,
+    data TEXT NOT NULL,
+    fetched_at INTEGER NOT NULL,
+    PRIMARY KEY (event_id, hour_start)
+  )
+`);
+
+const stmtGet = db.prepare("SELECT data, fetched_at FROM chunks WHERE event_id = ? AND hour_start = ?");
+const stmtUpsert = db.prepare(
+  "INSERT OR REPLACE INTO chunks (event_id, hour_start, data, fetched_at) VALUES (?, ?, ?, ?)",
+);
+const stmtAllForEvent = db.prepare("SELECT hour_start, data, fetched_at FROM chunks WHERE event_id = ?");
+
+// --- In-memory cache (fast path) ---
+const memCache = new Map<string, CacheChunk>();
 const CURRENT_CHUNK_TTL_MS = 60_000;
+
+// Load all existing chunks from SQLite into memory on startup
+function loadFromDb() {
+  const rows = db.prepare("SELECT event_id, hour_start, data, fetched_at FROM chunks").all() as { event_id: string; hour_start: number; data: string; fetched_at: number }[];
+
+  let count = 0;
+  for (const row of rows) {
+    const eid = row.event_id;
+    const key = `${eid}:${row.hour_start}`;
+    if (!memCache.has(key)) {
+      memCache.set(key, {
+        objects: JSON.parse(row.data),
+        fetchedAt: row.fetched_at,
+      });
+      count++;
+    }
+  }
+  if (count > 0) console.log(`Loaded ${count} cached chunks from SQLite`);
+}
+
+// Load everything on startup
+loadFromDb();
 
 function floorHour(unixSeconds: number): number {
   return Math.floor(unixSeconds / 3600) * 3600;
@@ -61,11 +104,10 @@ async function fetchChunk(
   hourStart: number,
 ): Promise<CacheChunk | null> {
   const key = `${eventId}:${hourStart}`;
-  const existing = chunkCache.get(key);
+  const existing = memCache.get(key);
   const now = Date.now();
   const isCurrentHour = floorHour(now / 1000) === hourStart;
 
-  // Historical chunks: never re-fetch. Current hour: refresh after TTL.
   if (existing && (!isCurrentHour || now - existing.fetchedAt < CURRENT_CHUNK_TTL_MS)) {
     return existing;
   }
@@ -78,24 +120,33 @@ async function fetchChunk(
     const response = await fetch(url);
     if (!response.ok) return existing ?? null;
     const data = await response.json();
+    const objects = data.objects ?? {};
+
+    // Slim the data before storing to save space
+    const slimmed: Record<string, SlimPoint[]> = {};
+    for (const [vesselId, points] of Object.entries(objects) as [string, DataPoint[]][]) {
+      slimmed[vesselId] = points.map(slim);
+    }
+
     const chunk: CacheChunk = {
-      objects: data.objects ?? {},
+      objects: slimmed as Record<string, DataPoint[]>,
       fetchedAt: now,
     };
-    chunkCache.set(key, chunk);
+    memCache.set(key, chunk);
+
+    // Persist historical chunks to SQLite (not the current hour — it changes)
+    if (!isCurrentHour) {
+      stmtUpsert.run(eventId, hourStart, JSON.stringify(slimmed), now);
+    }
+
     return chunk;
   } catch {
     return existing ?? null;
   }
 }
 
-// Track which events we've already started warming
 const warmingInProgress = new Set<string>();
 
-/**
- * Warm the cache by fetching all hour-chunks from `fromTime` to now.
- * Fetches in batches of 4 to avoid overwhelming the upstream.
- */
 async function warmCache(eventId: string, fromTime: number) {
   const key = `${eventId}:${fromTime}`;
   if (warmingInProgress.has(key)) return;
@@ -107,16 +158,19 @@ async function warmCache(eventId: string, fromTime: number) {
 
   const allHours: number[] = [];
   for (let h = firstHour; h <= lastHour; h += 3600) {
-    // Skip hours we already have cached
     const cacheKey = `${eventId}:${h}`;
-    if (!chunkCache.has(cacheKey)) {
+    if (!memCache.has(cacheKey)) {
       allHours.push(h);
     }
   }
 
+  if (allHours.length === 0) {
+    console.log(`Cache already warm for event ${eventId}`);
+    return;
+  }
+
   console.log(`Warming cache for event ${eventId}: ${allHours.length} hour-chunks to fetch`);
 
-  // Fetch in batches of 4
   const BATCH_SIZE = 4;
   for (let i = 0; i < allHours.length; i += BATCH_SIZE) {
     const batch = allHours.slice(i, i + BATCH_SIZE);
@@ -129,13 +183,6 @@ async function warmCache(eventId: string, fromTime: number) {
 
 const router = Router();
 
-/**
- * GET /api/data2/:eventId?time=...&trail=...&warmFrom=...
- *
- * `time` (unix seconds) — the selected slider position
- * `trail` (minutes) — how many minutes of trail to include before `time`
- * `warmFrom` (unix seconds, optional) — triggers background cache warming from this time
- */
 router.get("/:eventId", async (req, res) => {
   const { eventId } = req.params;
   const { time, trail, warmFrom } = req.query;
@@ -145,7 +192,6 @@ router.get("/:eventId", async (req, res) => {
     return;
   }
 
-  // Trigger background warming if requested
   if (warmFrom) {
     warmCache(eventId, Number(warmFrom)).catch(() => {});
   }

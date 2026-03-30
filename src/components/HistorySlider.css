@@ -13,6 +13,36 @@
   -webkit-backdrop-filter: blur(6px);
 }
 
+.history-slider--collapsed {
+  background: none;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 12px;
+  pointer-events: none;
+}
+
+.history-slider__toggle {
+  pointer-events: auto;
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #eee;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.history-slider__toggle:hover {
+  background: rgba(26, 26, 46, 0.95);
+}
+
+.history-slider__toggle--active {
+  border: 1px solid rgba(255, 159, 67, 0.6);
+}
+
 .history-slider--active {
   background: rgba(26, 26, 46, 0.92);
 }
@@ -54,6 +84,49 @@
 
 .history-slider__go-live:hover {
   background: #e74c3c;
+}
+
+.history-slider__close {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  margin-left: auto;
+}
+
+.history-slider__close:hover {
+  color: #fff;
+}
+
+.history-slider__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.history-slider__step-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ccc;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.history-slider__step-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.history-slider__step-btn:active {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .history-slider__input {
