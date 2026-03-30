@@ -1,22 +1,16 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import {
   EventConfigContext,
   useEventConfigLoader,
 } from "./hooks/useEventConfig";
 import { useHighlightedCrews } from "./hooks/useHighlightedCrews";
-import { useRoute } from "./router";
 import { LivePage } from "./pages/LivePage";
 import { HIGHLIGHTED_BOATS } from "./config";
-
-const HistoryPage = lazy(() =>
-  import("./pages/HistoryPage").then((m) => ({ default: m.HistoryPage })),
-);
 
 function App() {
   const eventConfig = useEventConfigLoader();
   const { highlightedCrews, toggleHighlight } = useHighlightedCrews();
-  const route = useRoute();
   const seededRef = useRef(false);
   const [panelCollapsed, setPanelCollapsed] = useState(
     () => localStorage.getItem("boatPanelCollapsed") === "true"
@@ -49,27 +43,17 @@ function App() {
     >
       <div className="app-container">
         <header>
-          {route === "live" && (
-            <button
-              className="header__panel-toggle"
-              onClick={togglePanel}
-              title={panelCollapsed ? "Show vessels" : "Hide vessels"}
-            >
-              {panelCollapsed ? "›" : "‹"}
-            </button>
-          )}
+          <button
+            className="header__panel-toggle"
+            onClick={togglePanel}
+            title={panelCollapsed ? "Show vessels" : "Hide vessels"}
+          >
+            {panelCollapsed ? "›" : "‹"}
+          </button>
           <h1>SeeSea <sup style={{ fontSize: "0.4em" }}>2.0</sup></h1>
         </header>
         <main>
-          {route === "history" ? (
-            <Suspense
-              fallback={<div className="loading">Loading...</div>}
-            >
-              <HistoryPage />
-            </Suspense>
-          ) : (
-            <LivePage panelCollapsed={panelCollapsed} onTogglePanel={togglePanel} />
-          )}
+          <LivePage panelCollapsed={panelCollapsed} onTogglePanel={togglePanel} />
         </main>
       </div>
     </EventConfigContext.Provider>

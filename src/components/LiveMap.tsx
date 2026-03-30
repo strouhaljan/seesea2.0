@@ -111,6 +111,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
 
   useEffect(() => {
     localStorage.setItem("trailMinutes", String(trailMinutes));
+    window.dispatchEvent(new Event("trailMinutesChanged"));
   }, [trailMinutes]);
 
   useImperativeHandle(ref, () => ({
@@ -418,7 +419,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     const tailFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
 
     if (trailMinutes > 0 && Object.keys(tails).length > 0) {
-      const cutoff = Date.now() / 1000 - trailMinutes * 60;
+      const cutoff = isHistoryMode ? 0 : Date.now() / 1000 - trailMinutes * 60;
       Object.entries(tails).forEach(([vesselId, points]) => {
         const isHighlighted = highlightedCrews.has(parseInt(vesselId));
         const shouldShow = !showOnlyHighlighted || isHighlighted;

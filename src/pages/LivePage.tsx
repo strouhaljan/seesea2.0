@@ -36,32 +36,37 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
   const mapRef = useRef<LiveMapHandle>(null);
 
   // Pick the current active leg for tails (last active leg by start date)
-  const activeLegId = useMemo(() => {
+  const activeLeg = useMemo(() => {
     const active = legs.filter((l) => l.active === 1);
     if (active.length === 0) return null;
     const now = Date.now();
     const current = active.find(
       (l) => new Date(l.start).getTime() <= now && new Date(l.end).getTime() >= now,
     );
-    return (current ?? active[0]).id;
+    return current ?? active[0];
   }, [legs]);
 
+  const activeLegId = activeLeg?.id ?? null;
+  const legStartTime = activeLeg ? Math.floor(new Date(activeLeg.start).getTime() / 1000) : 0;
+  const nowTime = Math.floor(Date.now() / 1000);
+
   const { tails, trackLengthMax } = useTails(eventId, activeLegId);
-  const { tripData, allTimestamps } = useHistoryData(eventId);
-  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
+  const [selectedTime, setSelectedTime] = useState<number | null>(null);
+  const [trailMinutes, setTrailMinutes] = useState(
+    () => parseInt(localStorage.getItem("trailMinutes") || "0", 10),
+  );
+  const { historyData, historyTails } = useHistoryData(eventId, selectedTime, trailMinutes, legStartTime);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
 
-  // When in history mode, extract a single-point-per-vessel snapshot
-  const displayData = useMemo(() => {
-    if (historyIndex === null || !tripData?.objects) return liveData;
-    const result: Record<string, VesselDataPoint> = {};
-    for (const [vesselId, points] of Object.entries(tripData.objects)) {
-      if (points[historyIndex]) {
-        result[vesselId] = points[historyIndex];
-      }
-    }
-    return result;
-  }, [historyIndex, tripData, liveData]);
+  // Sync trailMinutes from localStorage (LiveMap dispatches trailMinutesChanged)
+  useEffect(() => {
+    const handler = () => setTrailMinutes(parseInt(localStorage.getItem("trailMinutes") || "0", 10));
+    window.addEventListener("trailMinutesChanged", handler);
+    return () => window.removeEventListener("trailMinutesChanged", handler);
+  }, []);
+
+  const isHistoryMode = selectedTime !== null;
+  const displayData = isHistoryMode && Object.keys(historyData).length > 0 ? historyData : liveData;
 
   const handleBoatClick = useCallback((boatId: number) => {
     setActiveBoatId(boatId);
@@ -181,12 +186,12 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
         <LiveMap
           ref={mapRef}
           vesselsData={displayData}
-          tails={historyIndex === null ? tails : {}}
+          tails={isHistoryMode ? historyTails : tails}
           trackLengthMax={trackLengthMax}
           activeBoatId={activeBoatId}
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}
-          isHistoryMode={historyIndex !== null}
+          isHistoryMode={isHistoryMode}
         />
         <BoatPanel
           crews={crews}
@@ -199,12 +204,13 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
         />
       </div>
 
-      {lastUpdated && !error && historyIndex === null && <div className="live-dot" />}
+      {lastUpdated && !error && !isHistoryMode && <div className="live-dot" />}
 
       <HistorySlider
-        timestamps={allTimestamps}
-        currentIndex={historyIndex}
-        onIndexChange={setHistoryIndex}
+        startTime={legStartTime}
+        endTime={nowTime}
+        currentTime={selectedTime}
+        onTimeChange={setSelectedTime}
       />
     </div>
   );

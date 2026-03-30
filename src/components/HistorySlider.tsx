@@ -3,41 +3,45 @@ import { formatDate } from "../utils/dateUtils";
 import "./HistorySlider.css";
 
 interface HistorySliderProps {
-  timestamps: number[];
-  /** Index into timestamps, or null for live mode */
-  currentIndex: number | null;
-  onIndexChange: (index: number | null) => void;
+  /** Leg start as unix timestamp (seconds) */
+  startTime: number;
+  /** Current time as unix timestamp (seconds) */
+  endTime: number;
+  /** Selected timestamp, or null for live mode */
+  currentTime: number | null;
+  onTimeChange: (time: number | null) => void;
 }
 
 const HistorySlider = ({
-  timestamps,
-  currentIndex,
-  onIndexChange,
+  startTime,
+  endTime,
+  currentTime,
+  onTimeChange,
 }: HistorySliderProps) => {
-  const isLive = currentIndex === null;
+  const isLive = currentTime === null;
   const sliderRef = useRef<HTMLInputElement>(null);
 
-  // Slider range: 0..timestamps.length, where timestamps.length = LIVE
-  const max = timestamps.length;
-  const sliderValue = isLive ? max : currentIndex;
+  // Slider range: startTime..endTime+1, where endTime+1 = LIVE
+  const max = endTime + 1;
+  const sliderValue = isLive ? max : currentTime;
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = parseInt(e.target.value, 10);
-      if (val >= timestamps.length) {
-        onIndexChange(null);
+      if (val > endTime) {
+        onTimeChange(null);
       } else {
-        onIndexChange(val);
+        onTimeChange(val);
       }
     },
-    [timestamps.length, onIndexChange],
+    [endTime, onTimeChange],
   );
 
   const handleGoLive = useCallback(() => {
-    onIndexChange(null);
-  }, [onIndexChange]);
+    onTimeChange(null);
+  }, [onTimeChange]);
 
-  if (timestamps.length === 0) return null;
+  if (endTime <= startTime) return null;
 
   return (
     <div className={`history-slider ${isLive ? "" : "history-slider--active"}`}>
@@ -47,7 +51,7 @@ const HistorySlider = ({
         ) : (
           <>
             <span className="history-slider__timestamp">
-              {formatDate(timestamps[currentIndex])}
+              {formatDate(currentTime)}
             </span>
             <button className="history-slider__go-live" onClick={handleGoLive}>
               Go live
@@ -59,7 +63,7 @@ const HistorySlider = ({
         ref={sliderRef}
         type="range"
         className="history-slider__input"
-        min={0}
+        min={startTime}
         max={max}
         value={sliderValue}
         onChange={handleChange}
