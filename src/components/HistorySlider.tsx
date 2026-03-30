@@ -16,16 +16,23 @@ interface HistorySliderProps {
 function useRepeatAction(action: () => void) {
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
-  const start = useCallback(() => {
-    action();
-    intervalRef.current = setInterval(action, 250);
-  }, [action]);
-
   const stop = useCallback(() => {
     clearInterval(intervalRef.current);
+    intervalRef.current = undefined;
   }, []);
 
-  return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop, onTouchStart: start, onTouchEnd: stop };
+  const start = useCallback(() => {
+    stop();
+    action();
+    intervalRef.current = setInterval(action, 250);
+  }, [action, stop]);
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    start();
+  }, [start]);
+
+  return { onMouseDown: start, onMouseUp: stop, onMouseLeave: stop, onTouchStart, onTouchEnd: stop };
 }
 
 const HistorySlider = ({
