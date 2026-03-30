@@ -1,6 +1,6 @@
 .history-slider {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
   z-index: 15;
@@ -18,7 +18,7 @@
   padding: 0;
   display: flex;
   justify-content: center;
-  padding-bottom: 12px;
+  padding-top: 12px;
   pointer-events: none;
 }
 
