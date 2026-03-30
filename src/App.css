@@ -310,25 +310,6 @@ main {
   gap: 6px;
 }
 
-/* Map theme toggle button */
-.map-theme-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  background: var(--panel-bg);
-  color: var(--panel-text);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.map-theme-btn:hover {
-  background: var(--panel-hover);
-}
-
 /* Controls panel */
 .controls-panel {
   transition: transform 0.25s ease, opacity 0.25s ease;
