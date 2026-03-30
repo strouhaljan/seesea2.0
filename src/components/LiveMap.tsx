@@ -49,11 +49,12 @@ interface LiveMapProps {
   activeBoatId: number | null;
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
+  isHistoryMode?: boolean;
   controlsOpen: boolean;
   onToggleControls: () => void;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive, controlsOpen, onToggleControls }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive, isHistoryMode = false, controlsOpen, onToggleControls }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -114,6 +115,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
 
   useEffect(() => {
     localStorage.setItem("trailMinutes", String(trailMinutes));
+    window.dispatchEvent(new Event("trailMinutesChanged"));
   }, [trailMinutes]);
 
   // Switch map style when theme changes
@@ -391,7 +393,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     // Build GeoJSON lines for all vessels
     const lineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
 
-    if (futureMinutes > 0) {
+    if (futureMinutes > 0 && !isHistoryMode) {
       Object.entries(vesselsData).forEach(([vesselId, data]) => {
         if (!data.coords || !data.sog || data.sog <= 0) return;
 
@@ -475,7 +477,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     const tailFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
 
     if (trailMinutes > 0 && Object.keys(tails).length > 0) {
-      const cutoff = Date.now() / 1000 - trailMinutes * 60;
+      const cutoff = isHistoryMode ? 0 : Date.now() / 1000 - trailMinutes * 60;
       Object.entries(tails).forEach(([vesselId, points]) => {
         const isHighlighted = highlightedCrews.has(parseInt(vesselId));
         const shouldShow = !showOnlyHighlighted || isHighlighted;
@@ -528,7 +530,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes]);
+  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes, isHistoryMode]);
 
 
   return (

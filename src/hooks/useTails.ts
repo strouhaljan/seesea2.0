@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** Raw tail point from the API: [timestamp, latitude, longitude] */
+/** Raw tail point from the API: [timestamp, longitude, latitude] */
 export type TailPoint = [number, number, number];
 
 /** Tails data keyed by vessel ID */

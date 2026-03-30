@@ -1,70 +1,97 @@
-import { useEffect, useState } from "react";
-import { TripData } from "../types/tripData";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { VesselDataPoint, TripData } from "../types/tripData";
+import { TailPoint, TailsData } from "./useTails";
 
-interface HistoryDataResult {
-  tripData: TripData | null;
-  allTimestamps: number[];
-  isLoading: boolean;
-  error: string | null;
+interface UseHistoryDataResult {
+  historyData: Record<string, VesselDataPoint>;
+  historyTails: TailsData;
+  loading: boolean;
 }
 
-export function useHistoryData(eventId: number | null): HistoryDataResult {
-  const [tripData, setTripData] = useState<TripData | null>(null);
-  const [allTimestamps, setAllTimestamps] = useState<number[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * Fetches vessel positions for a specific point in time via the server.
+ * The server caches 1-hour chunks and returns only the needed slice.
+ * On the first request, triggers background warming of the full history.
+ */
+export function useHistoryData(
+  eventId: number | null,
+  selectedTime: number | null,
+  trailMinutes: number,
+  legStartTime: number,
+): UseHistoryDataResult {
+  const [historyData, setHistoryData] = useState<Record<string, VesselDataPoint>>({});
+  const [historyTails, setHistoryTails] = useState<TailsData>({});
+  const [loading, setLoading] = useState(false);
+  const abortRef = useRef<AbortController>(undefined);
+  const warmedRef = useRef(false);
 
-  useEffect(() => {
-    if (!eventId) return;
+  const fetchData = useCallback(
+    async (time: number, trail: number) => {
+      if (!eventId) return;
 
-    const controller = new AbortController();
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-    const fetchData = async () => {
       try {
-        setIsLoading(true);
-
-        // First fetch metadata to get time range
-        const metaRes = await fetch(`/api/history/${eventId}`, {
-          signal: controller.signal,
+        setLoading(true);
+        const params = new URLSearchParams({
+          time: String(time),
+          trail: String(trail),
         });
-        if (!metaRes.ok) throw new Error(`HTTP error! Status: ${metaRes.status}`);
-        const meta = await metaRes.json();
-
-        // Then fetch full data using the time range
-        const dataRes = await fetch(
-          `/api/history/${eventId}?from=${meta.timeRange.from}&to=${meta.timeRange.to}`,
+        // On first request, tell server to warm the full cache
+        if (!warmedRef.current && legStartTime > 0) {
+          params.set("warmFrom", String(legStartTime));
+          warmedRef.current = true;
+        }
+        const res = await fetch(
+          `/api/data2/${eventId}?${params}`,
           { signal: controller.signal },
         );
-        if (!dataRes.ok) throw new Error(`HTTP error! Status: ${dataRes.status}`);
-        const data = await dataRes.json();
+        if (!res.ok) return;
+        const data: TripData = await res.json();
 
-        setTripData(data);
+        const positions: Record<string, VesselDataPoint> = {};
+        const tails: TailsData = {};
 
-        // Derive timestamps from first vessel's points
-        const vesselIds = Object.keys(data.objects);
-        const firstVesselData =
-          vesselIds.length > 0 ? data.objects[vesselIds[0]] : [];
-        setAllTimestamps(firstVesselData.map((point: { time: number }) => point.time));
+        for (const [vesselId, points] of Object.entries(data.objects ?? {})) {
+          if (points.length === 0) continue;
+
+          let best = points[0];
+          for (const p of points) {
+            if (p.time <= time) best = p;
+          }
+          positions[vesselId] = best;
+
+          const tailPoints: TailPoint[] = points
+            .filter((p) => p.time <= time)
+            .map((p) => [p.time, p.coords[0], p.coords[1]]);
+          if (tailPoints.length > 0) {
+            tails[vesselId] = tailPoints;
+          }
+        }
+
+        setHistoryData(positions);
+        setHistoryTails(tails);
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        const message =
-          err instanceof Error ? err.message : "An unknown error occurred";
-        setError(message);
-        console.error("Error fetching history data:", err);
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("Failed to fetch history data:", err);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
-    };
+    },
+    [eventId, legStartTime],
+  );
 
-    fetchData();
+  useEffect(() => {
+    if (selectedTime === null) {
+      setHistoryData({});
+      setHistoryTails({});
+      return;
+    }
 
-    return () => controller.abort();
-  }, [eventId]);
+    fetchData(selectedTime, trailMinutes);
+  }, [selectedTime, trailMinutes, fetchData]);
 
-  return {
-    tripData,
-    allTimestamps,
-    isLoading,
-    error,
-  };
+  return { historyData, historyTails, loading };
 }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sailboat, SlidersHorizontal } from "lucide-react";
 import "./App.css";
 import {
@@ -6,18 +6,12 @@ import {
   useEventConfigLoader,
 } from "./hooks/useEventConfig";
 import { useHighlightedCrews } from "./hooks/useHighlightedCrews";
-import { useRoute } from "./router";
 import { LivePage } from "./pages/LivePage";
 import { HIGHLIGHTED_BOATS } from "./config";
-
-const HistoryPage = lazy(() =>
-  import("./pages/HistoryPage").then((m) => ({ default: m.HistoryPage })),
-);
 
 function App() {
   const eventConfig = useEventConfigLoader();
   const { highlightedCrews, toggleHighlight } = useHighlightedCrews();
-  const route = useRoute();
   const seededRef = useRef(false);
   const [panelCollapsed, setPanelCollapsed] = useState(
     () => localStorage.getItem("boatPanelCollapsed") === "true"
@@ -59,36 +53,24 @@ function App() {
     >
       <div className="app-container">
         <header>
-          {route === "live" && (
-            <button
-              className="header__panel-toggle"
-              onClick={togglePanel}
-              title={panelCollapsed ? "Show vessels" : "Hide vessels"}
-            >
-              <Sailboat size={18} />
-            </button>
-          )}
+          <button
+            className="header__panel-toggle"
+            onClick={togglePanel}
+            title={panelCollapsed ? "Show vessels" : "Hide vessels"}
+          >
+            <Sailboat size={18} />
+          </button>
           <h1>SeeSea <sup style={{ fontSize: "0.4em" }}>2.0</sup></h1>
-          {route === "live" && (
-            <button
-              className="header__controls-toggle"
-              onClick={toggleControls}
-              title={controlsOpen ? "Hide controls" : "Show controls"}
-            >
-              <SlidersHorizontal size={18} />
-            </button>
-          )}
+          <button
+            className="header__controls-toggle"
+            onClick={toggleControls}
+            title={controlsOpen ? "Hide controls" : "Show controls"}
+          >
+            <SlidersHorizontal size={18} />
+          </button>
         </header>
         <main>
-          {route === "history" ? (
-            <Suspense
-              fallback={<div className="loading">Loading...</div>}
-            >
-              <HistoryPage />
-            </Suspense>
-          ) : (
-            <LivePage panelCollapsed={panelCollapsed} onTogglePanel={togglePanel} controlsOpen={controlsOpen} onToggleControls={toggleControls} />
-          )}
+          <LivePage panelCollapsed={panelCollapsed} onTogglePanel={togglePanel} controlsOpen={controlsOpen} onToggleControls={toggleControls} />
         </main>
       </div>
     </EventConfigContext.Provider>
