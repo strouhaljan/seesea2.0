@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Sailboat, SlidersHorizontal } from "lucide-react";
 import "./App.css";
 import {
   EventConfigContext,
@@ -18,6 +19,15 @@ function App() {
   const togglePanel = useCallback(() => {
     setPanelCollapsed((v) => {
       localStorage.setItem("boatPanelCollapsed", String(!v));
+      return !v;
+    });
+  }, []);
+  const [controlsOpen, setControlsOpen] = useState(
+    () => localStorage.getItem("controlsOpen") !== "false"
+  );
+  const toggleControls = useCallback(() => {
+    setControlsOpen((v) => {
+      localStorage.setItem("controlsOpen", String(!v));
       return !v;
     });
   }, []);
@@ -48,12 +58,19 @@ function App() {
             onClick={togglePanel}
             title={panelCollapsed ? "Show vessels" : "Hide vessels"}
           >
-            {panelCollapsed ? "›" : "‹"}
+            <Sailboat size={18} />
           </button>
           <h1>SeeSea <sup style={{ fontSize: "0.4em" }}>2.0</sup></h1>
+          <button
+            className="header__controls-toggle"
+            onClick={toggleControls}
+            title={controlsOpen ? "Hide controls" : "Show controls"}
+          >
+            <SlidersHorizontal size={18} />
+          </button>
         </header>
         <main>
-          <LivePage panelCollapsed={panelCollapsed} onTogglePanel={togglePanel} />
+          <LivePage panelCollapsed={panelCollapsed} onTogglePanel={togglePanel} controlsOpen={controlsOpen} onToggleControls={toggleControls} />
         </main>
       </div>
     </EventConfigContext.Provider>

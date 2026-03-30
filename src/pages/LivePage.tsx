@@ -25,9 +25,11 @@ function formatDataAge(lastUpdated: Date): string {
 interface LivePageProps {
   panelCollapsed: boolean;
   onTogglePanel: () => void;
+  controlsOpen: boolean;
+  onToggleControls: () => void;
 }
 
-export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
+export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggleControls }: LivePageProps) => {
   const [liveData, setLiveData] = useState<Record<string, VesselDataPoint>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +194,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}
           isHistoryMode={isHistoryMode}
+          controlsOpen={controlsOpen}
+          onToggleControls={onToggleControls}
         />
         <BoatPanel
           crews={crews}

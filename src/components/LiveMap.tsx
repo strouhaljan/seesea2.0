@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
@@ -6,7 +6,7 @@ import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 import { useEventConfig } from "../hooks/useEventConfig";
-import { MAP_STYLE, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID } from "../utils/mapConfig";
+import { MAP_STYLES, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID, getSavedTheme, saveTheme, MapTheme } from "../utils/mapConfig";
 import { OUR_BOAT } from "../config";
 import { WindOverlay } from "./WindOverlay";
 import { fetchWindGrid, blendBoatData, WindModel } from "../utils/windGrid";
@@ -50,9 +50,11 @@ interface LiveMapProps {
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
   isHistoryMode?: boolean;
+  controlsOpen: boolean;
+  onToggleControls: () => void;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive, isHistoryMode = false }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive, isHistoryMode = false, controlsOpen, onToggleControls }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -78,10 +80,12 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
   const [trailMinutes, setTrailMinutes] = useState(
     () => parseInt(localStorage.getItem("trailMinutes") || "0", 10)
   );
+  const [mapTheme, setMapTheme] = useState<MapTheme>(getSavedTheme);
   const rootsRef = useRef<Record<string, Root>>({});
   const futureMarkersRef = useRef<Record<string, Marker>>({});
   const futureRootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
+  const vesselsSnapshotRef = useRef<{ data: Record<string, VesselDataPoint>; receivedAt: number }>({ data: {}, receivedAt: 0 });
   const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
 
@@ -114,6 +118,23 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     window.dispatchEvent(new Event("trailMinutesChanged"));
   }, [trailMinutes]);
 
+  // Switch map style when theme changes
+  useEffect(() => {
+    saveTheme(mapTheme);
+    document.documentElement.setAttribute("data-theme", mapTheme);
+    if (!map.current) return;
+    // setStyle removes all custom sources/layers — set mapLoaded to false
+    // so the vessel-update effect re-adds them after the new style loads
+    setMapLoaded(false);
+    map.current.once("style.load", () => setMapLoaded(true));
+    map.current.setStyle(MAP_STYLES[mapTheme]);
+  }, [mapTheme]);
+
+  // Set initial data-theme attribute
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", mapTheme);
+  }, []);
+
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
       map.current?.flyTo({ center: coords, zoom: 17, speed: 2 });
@@ -126,7 +147,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: MAP_STYLE,
+      style: MAP_STYLES[getSavedTheme()],
       center: DEFAULT_CENTER,
       zoom: getSavedZoom(),
       dragRotate: false,
@@ -199,6 +220,37 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     };
   }, [mapLoaded, showWind, windModel, blendBoats, vesselsData]);
 
+  // Snapshot vessel data with receive timestamp for interpolation
+  useEffect(() => {
+    if (Object.keys(vesselsData).length > 0) {
+      vesselsSnapshotRef.current = { data: vesselsData, receivedAt: performance.now() };
+    }
+  }, [vesselsData]);
+
+  // Animate marker positions between data updates using SOG/COG projection
+  useEffect(() => {
+    if (!mapLoaded) return;
+    let raf = 0;
+    const tick = () => {
+      const { data, receivedAt } = vesselsSnapshotRef.current;
+      if (receivedAt > 0) {
+        const elapsedMin = (performance.now() - receivedAt) / 60_000;
+        for (const [id, vessel] of Object.entries(data)) {
+          const marker = markersRef.current[id];
+          if (!marker || !vessel.coords) continue;
+          const cog = vessel.cog || vessel.hdg || 0;
+          const sog = vessel.sog || 0;
+          if (sog > 0 && cog) {
+            marker.setLngLat(futurePosition(vessel.coords, sog, cog, elapsedMin));
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [mapLoaded]);
+
   // Update markers based on live data
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
@@ -256,14 +308,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             showWindArrow={
               data.twa !== undefined && data.tws !== undefined && data.tws > 0
             }
+            number={crew?.start_number}
           />,
         );
       } else {
         // Create new marker
         const el = document.createElement("div");
         el.className = "vessel-marker";
-        el.style.width = "24px";
-        el.style.height = "35px";
+        el.style.width = "36px";
+        el.style.height = "50px";
 
         // Generate initial boat icon
         const rotation = data.hdg || data.cog || 0;
@@ -283,6 +336,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             showWindArrow={
               data.twa !== undefined && data.tws !== undefined && data.tws > 0
             }
+            number={crew?.start_number}
           />,
         );
 
@@ -305,11 +359,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       }
     });
 
-    // Show/hide markers based on highlighted filter
+    // Show/hide markers and set z-index for highlighted/selected vessels
     Object.entries(markersRef.current).forEach(([vesselId, marker]) => {
-      const isHighlighted = highlightedCrews.has(parseInt(vesselId));
+      const vid = parseInt(vesselId);
+      const isHighlighted = highlightedCrews.has(vid);
+      const isSelected = activeBoatId === vid;
       const shouldShow = !showOnlyHighlighted || isHighlighted;
-      marker.getElement().style.display = shouldShow ? "" : "none";
+      const el = marker.getElement();
+      el.style.display = shouldShow ? "" : "none";
+      el.style.zIndex = isSelected ? "3" : isHighlighted ? "2" : "1";
     });
 
     // Remove markers for vessels not in the current data
@@ -363,8 +421,8 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         // Ghost marker at future position
         const el = document.createElement("div");
         el.className = "vessel-marker vessel-marker--future";
-        el.style.width = "24px";
-        el.style.height = "35px";
+        el.style.width = "36px";
+        el.style.height = "50px";
         el.style.pointerEvents = "none";
 
         const root = createRoot(el);
@@ -474,12 +532,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     }
   }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes, isHistoryMode]);
 
+
   return (
     <div className="map-wrapper">
       <div ref={mapContainer} className="map-container" />
 
       <div className="controls-stack">
-        <div className="controls-panel">
+        <div
+          className={`controls-panel ${controlsOpen ? "" : "controls-panel--hidden"}`}
+        >
           <div className="controls-panel__row">
             <span className="controls-panel__label">SeeSea</span>
           <label className="toggle-switch">
@@ -590,6 +651,19 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             </div>
           </>
           )}
+        <div className="controls-panel__divider" />
+        <div className="controls-panel__row">
+          <span className="controls-panel__label">Dark</span>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={mapTheme === "light"}
+              onChange={() => setMapTheme(mapTheme === "dark" ? "light" : "dark")}
+            />
+            <span className="toggle-switch__slider" />
+          </label>
+          <span className="controls-panel__label">Light</span>
+        </div>
         </div>
       </div>
     </div>
