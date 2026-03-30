@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import LiveMap, { LiveMapHandle } from "../components/LiveMap";
 import BoatPanel from "../components/BoatPanel";
+import HistorySlider from "../components/HistorySlider";
 import { usePolling } from "../hooks/usePolling";
 import { useEventConfig } from "../hooks/useEventConfig";
 import { useTails } from "../hooks/useTails";
+import { useHistoryData } from "../hooks/useHistoryData";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -45,7 +47,21 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
   }, [legs]);
 
   const { tails, trackLengthMax } = useTails(eventId, activeLegId);
+  const { tripData, allTimestamps } = useHistoryData(eventId);
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
+
+  // When in history mode, extract a single-point-per-vessel snapshot
+  const displayData = useMemo(() => {
+    if (historyIndex === null || !tripData?.objects) return liveData;
+    const result: Record<string, VesselDataPoint> = {};
+    for (const [vesselId, points] of Object.entries(tripData.objects)) {
+      if (points[historyIndex]) {
+        result[vesselId] = points[historyIndex];
+      }
+    }
+    return result;
+  }, [historyIndex, tripData, liveData]);
 
   const handleBoatClick = useCallback((boatId: number) => {
     setActiveBoatId(boatId);
@@ -57,11 +73,11 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
   }, []);
 
   const handleFocusBoat = useCallback((boatId: number) => {
-    const data = liveData[String(boatId)];
+    const data = displayData[String(boatId)];
     if (data?.coords) {
       mapRef.current?.flyTo(data.coords);
     }
-  }, [liveData]);
+  }, [displayData]);
 
   const fetchLiveData = useCallback(async () => {
     if (!eventId) return;
@@ -164,16 +180,17 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
       <div className="controls-container">
         <LiveMap
           ref={mapRef}
-          vesselsData={liveData}
-          tails={tails}
+          vesselsData={displayData}
+          tails={historyIndex === null ? tails : {}}
           trackLengthMax={trackLengthMax}
           activeBoatId={activeBoatId}
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}
+          isHistoryMode={historyIndex !== null}
         />
         <BoatPanel
           crews={crews}
-          vesselsData={liveData}
+          vesselsData={displayData}
           activeBoatId={activeBoatId}
           collapsed={panelCollapsed}
           onToggleCollapsed={onTogglePanel}
@@ -182,7 +199,13 @@ export const LivePage = ({ panelCollapsed, onTogglePanel }: LivePageProps) => {
         />
       </div>
 
-      {lastUpdated && !error && <div className="live-dot" />}
+      {lastUpdated && !error && historyIndex === null && <div className="live-dot" />}
+
+      <HistorySlider
+        timestamps={allTimestamps}
+        currentIndex={historyIndex}
+        onIndexChange={setHistoryIndex}
+      />
     </div>
   );
 };
