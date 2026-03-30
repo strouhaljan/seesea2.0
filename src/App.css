@@ -251,25 +251,6 @@ main {
   gap: 6px;
 }
 
-/* Map reset button */
-.map-reset-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(26, 26, 46, 0.9);
-  color: #eee;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.map-reset-btn:hover {
-  background: rgba(40, 40, 70, 0.95);
-}
-
 /* Controls panel */
 .controls-panel {
   background: rgba(26, 26, 46, 0.9);
