@@ -81,6 +81,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
   const futureMarkersRef = useRef<Record<string, Marker>>({});
   const futureRootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
+  const vesselsSnapshotRef = useRef<{ data: Record<string, VesselDataPoint>; receivedAt: number }>({ data: {}, receivedAt: 0 });
   const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
 
@@ -196,6 +197,37 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       windOverlayRef.current?.hide();
     };
   }, [mapLoaded, showWind, windModel, blendBoats, vesselsData]);
+
+  // Snapshot vessel data with receive timestamp for interpolation
+  useEffect(() => {
+    if (Object.keys(vesselsData).length > 0) {
+      vesselsSnapshotRef.current = { data: vesselsData, receivedAt: performance.now() };
+    }
+  }, [vesselsData]);
+
+  // Animate marker positions between data updates using SOG/COG projection
+  useEffect(() => {
+    if (!mapLoaded) return;
+    let raf = 0;
+    const tick = () => {
+      const { data, receivedAt } = vesselsSnapshotRef.current;
+      if (receivedAt > 0) {
+        const elapsedMin = (performance.now() - receivedAt) / 60_000;
+        for (const [id, vessel] of Object.entries(data)) {
+          const marker = markersRef.current[id];
+          if (!marker || !vessel.coords) continue;
+          const cog = vessel.cog || vessel.hdg || 0;
+          const sog = vessel.sog || 0;
+          if (sog > 0 && cog) {
+            marker.setLngLat(futurePosition(vessel.coords, sog, cog, elapsedMin));
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [mapLoaded]);
 
   // Update markers based on live data
   useEffect(() => {
