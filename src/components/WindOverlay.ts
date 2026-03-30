@@ -47,7 +47,7 @@ export class WindOverlay {
     this.syncSize();
 
     this.map.on("resize", this.syncSize);
-    this.map.on("zoom", this.onZoom);
+    this.map.on("move", this.onCameraChange);
   }
 
   show(): void {
@@ -79,7 +79,7 @@ export class WindOverlay {
   destroy(): void {
     this.hide();
     this.map.off("resize", this.syncSize);
-    this.map.off("zoom", this.onZoom);
+    this.map.off("move", this.onCameraChange);
   }
 
   private syncSize = (): void => {
@@ -94,9 +94,9 @@ export class WindOverlay {
     }
   };
 
-  // On zoom, reset all particles immediately so they redistribute
-  // within the new viewport and trails don't stretch/compress
-  private onZoom = (): void => {
+  // On any camera change (pan, zoom), reset all particles so they
+  // redistribute within the new viewport and trails don't stretch
+  private onCameraChange = (): void => {
     for (const p of this.particles) {
       this.resetParticle(p);
     }
