@@ -6,7 +6,7 @@ import BoatIcon from "./BoatIcon";
 import { createRoot } from "react-dom/client";
 import { Root } from "react-dom/client";
 import { useEventConfig } from "../hooks/useEventConfig";
-import { MAP_STYLE, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID } from "../utils/mapConfig";
+import { MAP_STYLES, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID, getSavedTheme, saveTheme, MapTheme } from "../utils/mapConfig";
 import { OUR_BOAT } from "../config";
 import { WindOverlay } from "./WindOverlay";
 import { fetchWindGrid, blendBoatData, WindModel } from "../utils/windGrid";
@@ -79,11 +79,12 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
   const [trailMinutes, setTrailMinutes] = useState(
     () => parseInt(localStorage.getItem("trailMinutes") || "0", 10)
   );
+  const [mapTheme, setMapTheme] = useState<MapTheme>(getSavedTheme);
   const rootsRef = useRef<Record<string, Root>>({});
   const futureMarkersRef = useRef<Record<string, Marker>>({});
   const futureRootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
-  const [mapRotated, setMapRotated] = useState(false);
+  const vesselsSnapshotRef = useRef<{ data: Record<string, VesselDataPoint>; receivedAt: number }>({ data: {}, receivedAt: 0 });
   const windOverlayRef = useRef<WindOverlay | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
 
@@ -115,6 +116,23 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     localStorage.setItem("trailMinutes", String(trailMinutes));
   }, [trailMinutes]);
 
+  // Switch map style when theme changes
+  useEffect(() => {
+    saveTheme(mapTheme);
+    document.documentElement.setAttribute("data-theme", mapTheme);
+    if (!map.current) return;
+    // setStyle removes all custom sources/layers — set mapLoaded to false
+    // so the vessel-update effect re-adds them after the new style loads
+    setMapLoaded(false);
+    map.current.once("style.load", () => setMapLoaded(true));
+    map.current.setStyle(MAP_STYLES[mapTheme]);
+  }, [mapTheme]);
+
+  // Set initial data-theme attribute
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", mapTheme);
+  }, []);
+
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
       map.current?.flyTo({ center: coords, zoom: 17, speed: 2 });
@@ -127,10 +145,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: MAP_STYLE,
+      style: MAP_STYLES[getSavedTheme()],
       center: DEFAULT_CENTER,
       zoom: getSavedZoom(),
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
     });
+
+    map.current.touchZoomRotate.disableRotation();
 
     map.current.on("load", () => {
       setMapLoaded(true);
@@ -143,15 +166,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     map.current.on("click", () => {
       onClearActive();
     });
-
-    const onMoveEnd = () => {
-      if (!map.current) return;
-      const bearing = map.current.getBearing();
-      const pitch = map.current.getPitch();
-      setMapRotated(Math.abs(bearing) > 0.5 || pitch > 0.5);
-    };
-    map.current.on("moveend", onMoveEnd);
-    map.current.on("pitchend", onMoveEnd);
 
     return () => {
       // Clean up all React roots
@@ -203,6 +217,37 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       windOverlayRef.current?.hide();
     };
   }, [mapLoaded, showWind, windModel, blendBoats, vesselsData]);
+
+  // Snapshot vessel data with receive timestamp for interpolation
+  useEffect(() => {
+    if (Object.keys(vesselsData).length > 0) {
+      vesselsSnapshotRef.current = { data: vesselsData, receivedAt: performance.now() };
+    }
+  }, [vesselsData]);
+
+  // Animate marker positions between data updates using SOG/COG projection
+  useEffect(() => {
+    if (!mapLoaded) return;
+    let raf = 0;
+    const tick = () => {
+      const { data, receivedAt } = vesselsSnapshotRef.current;
+      if (receivedAt > 0) {
+        const elapsedMin = (performance.now() - receivedAt) / 60_000;
+        for (const [id, vessel] of Object.entries(data)) {
+          const marker = markersRef.current[id];
+          if (!marker || !vessel.coords) continue;
+          const cog = vessel.cog || vessel.hdg || 0;
+          const sog = vessel.sog || 0;
+          if (sog > 0 && cog) {
+            marker.setLngLat(futurePosition(vessel.coords, sog, cog, elapsedMin));
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [mapLoaded]);
 
   // Update markers based on live data
   useEffect(() => {
@@ -261,14 +306,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             showWindArrow={
               data.twa !== undefined && data.tws !== undefined && data.tws > 0
             }
+            number={crew?.start_number}
           />,
         );
       } else {
         // Create new marker
         const el = document.createElement("div");
         el.className = "vessel-marker";
-        el.style.width = "24px";
-        el.style.height = "35px";
+        el.style.width = "36px";
+        el.style.height = "50px";
 
         // Generate initial boat icon
         const rotation = data.hdg || data.cog || 0;
@@ -288,6 +334,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             showWindArrow={
               data.twa !== undefined && data.tws !== undefined && data.tws > 0
             }
+            number={crew?.start_number}
           />,
         );
 
@@ -310,11 +357,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       }
     });
 
-    // Show/hide markers based on highlighted filter
+    // Show/hide markers and set z-index for highlighted/selected vessels
     Object.entries(markersRef.current).forEach(([vesselId, marker]) => {
-      const isHighlighted = highlightedCrews.has(parseInt(vesselId));
+      const vid = parseInt(vesselId);
+      const isHighlighted = highlightedCrews.has(vid);
+      const isSelected = activeBoatId === vid;
       const shouldShow = !showOnlyHighlighted || isHighlighted;
-      marker.getElement().style.display = shouldShow ? "" : "none";
+      const el = marker.getElement();
+      el.style.display = shouldShow ? "" : "none";
+      el.style.zIndex = isSelected ? "3" : isHighlighted ? "2" : "1";
     });
 
     // Remove markers for vessels not in the current data
@@ -368,8 +419,8 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         // Ghost marker at future position
         const el = document.createElement("div");
         el.className = "vessel-marker vessel-marker--future";
-        el.style.width = "24px";
-        el.style.height = "35px";
+        el.style.width = "36px";
+        el.style.height = "50px";
         el.style.pointerEvents = "none";
 
         const root = createRoot(el);
@@ -502,20 +553,32 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       <div ref={mapContainer} className="map-container" />
 
       <div className="controls-stack">
-        {mapRotated && (
-          <button
-            className="map-reset-btn"
-            title="Reset north &amp; tilt"
-            onClick={() => {
-              map.current?.easeTo({ bearing: 0, pitch: 0, duration: 400 });
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18">
-              <polygon points="9,1 12,8 9,6.5 6,8" fill="#e55" />
-              <polygon points="9,17 6,10 9,11.5 12,10" fill="#ccc" />
+        <button
+          className="map-theme-btn"
+          title={mapTheme === "dark" ? "Switch to light map" : "Switch to dark map"}
+          onClick={() => setMapTheme(mapTheme === "dark" ? "light" : "dark")}
+        >
+          {mapTheme === "dark" ? (
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="4" fill="#eee" />
+              <g stroke="#eee" strokeWidth="1.5" strokeLinecap="round">
+                <line x1="10" y1="1" x2="10" y2="3.5" />
+                <line x1="10" y1="16.5" x2="10" y2="19" />
+                <line x1="1" y1="10" x2="3.5" y2="10" />
+                <line x1="16.5" y1="10" x2="19" y2="10" />
+                <line x1="3.6" y1="3.6" x2="5.4" y2="5.4" />
+                <line x1="14.6" y1="14.6" x2="16.4" y2="16.4" />
+                <line x1="3.6" y1="16.4" x2="5.4" y2="14.6" />
+                <line x1="14.6" y1="5.4" x2="16.4" y2="3.6" />
+              </g>
             </svg>
-          </button>
-        )}
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M10 3a7 7 0 1 0 7 7 5 5 0 0 1-7-7Z" fill="#555" />
+            </svg>
+          )}
+        </button>
+
 
         <div
           className={`controls-panel ${controlsOpen ? "" : "controls-panel--hidden"}`}

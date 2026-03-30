@@ -1,3 +1,44 @@
+:root,
+[data-theme="dark"] {
+  --panel-bg: rgba(26, 26, 46, 0.9);
+  --panel-bg-solid: #1a1a2e;
+  --panel-text: #eee;
+  --panel-text-muted: #ccc;
+  --panel-text-dim: #aaa;
+  --panel-text-faint: #999;
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --panel-input-bg: rgba(255, 255, 255, 0.1);
+  --panel-input-focus-bg: rgba(255, 255, 255, 0.15);
+  --panel-input-border: rgba(255, 255, 255, 0.15);
+  --panel-hover: rgba(40, 40, 70, 0.95);
+  --card-ours-bg: rgba(0, 60, 90, 0.9);
+  --card-active-bg: rgba(50, 50, 80, 0.95);
+  --card-active-outline: rgba(255, 255, 255, 0.8);
+  --card-active-shadow: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --star-hover-bg: rgba(255, 200, 0, 0.15);
+}
+
+[data-theme="light"] {
+  --panel-bg: #ffffff;
+  --panel-bg-solid: #ffffff;
+  --panel-text: #1a1a2e;
+  --panel-text-muted: #333;
+  --panel-text-dim: #555;
+  --panel-text-faint: #777;
+  --panel-border: rgba(0, 0, 0, 0.15);
+  --panel-input-bg: #ededed;
+  --panel-input-focus-bg: #e2e2e2;
+  --panel-input-border: rgba(0, 0, 0, 0.3);
+  --panel-hover: rgba(0, 0, 0, 0.08);
+  --card-ours-bg: #dceef7;
+  --card-active-bg: #d0e4f0;
+  --card-active-outline: rgba(0, 80, 150, 0.5);
+  --card-active-shadow: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --star-hover-bg: rgba(255, 200, 0, 0.2);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -24,8 +65,8 @@ body, html {
 }
 
 header {
-  background-color: #1a1a2e;
-  color: white;
+  background-color: var(--panel-bg-solid);
+  color: var(--panel-text);
   padding: 0.35rem 0.75rem;
   display: grid;
   grid-template-columns: 40px 1fr 40px;
@@ -48,7 +89,7 @@ header h1 {
   height: 24px;
   background: none;
   border: none;
-  color: #ccc;
+  color: var(--panel-text-muted);
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
@@ -67,7 +108,7 @@ header h1 {
   height: 24px;
   background: none;
   border: none;
-  color: #ccc;
+  color: var(--panel-text-muted);
   cursor: pointer;
   padding: 0;
   display: flex;
@@ -83,7 +124,7 @@ header h1 {
 }
 
 .nav-link {
-  color: #ddd;
+  color: var(--panel-text-muted);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.85rem;
@@ -93,14 +134,14 @@ header h1 {
 }
 
 .nav-link:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--panel-text);
+  background-color: var(--panel-hover);
 }
 
 .nav-link.active {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  color: var(--panel-text);
+  background-color: var(--panel-hover);
+  box-shadow: 0 0 0 1px var(--panel-border);
 }
 
 main {
@@ -268,14 +309,14 @@ main {
   gap: 6px;
 }
 
-/* Map reset button */
-.map-reset-btn {
+/* Map theme toggle button */
+.map-theme-btn {
   width: 32px;
   height: 32px;
   border: none;
   border-radius: 6px;
-  background: rgba(26, 26, 46, 0.9);
-  color: #eee;
+  background: var(--panel-bg);
+  color: var(--panel-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -283,15 +324,15 @@ main {
   padding: 0;
 }
 
-.map-reset-btn:hover {
-  background: rgba(40, 40, 70, 0.95);
+.map-theme-btn:hover {
+  background: var(--panel-hover);
 }
 
 /* Controls panel */
 .controls-panel {
   transition: transform 0.25s ease, opacity 0.25s ease;
-  background: rgba(26, 26, 46, 0.9);
-  color: #eee;
+  background: var(--panel-bg);
+  color: var(--panel-text);
   border-radius: 6px;
   padding: 10px 14px;
   font-size: 12px;
@@ -313,7 +354,7 @@ main {
 }
 
 .controls-panel__label {
-  color: #ccc;
+  color: var(--panel-text-muted);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -337,7 +378,7 @@ main {
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background: #555;
+  background: var(--panel-text-faint);
   border-radius: 20px;
   transition: background 0.2s;
 }
@@ -363,7 +404,7 @@ main {
 }
 
 .controls-panel__divider {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--panel-border);
   margin: 2px 0;
 }
 
@@ -372,7 +413,7 @@ main {
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  color: #ccc;
+  color: var(--panel-text-muted);
   font-size: 11px;
 }
 
@@ -391,7 +432,7 @@ main {
   display: flex;
   justify-content: space-between;
   font-size: 9px;
-  color: #999;
+  color: var(--panel-text-faint);
   padding: 0 2px;
 }
 
@@ -426,7 +467,7 @@ main {
   min-height: 0;
   box-sizing: border-box;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.2) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .boat-panel__search-wrap {
@@ -439,22 +480,22 @@ main {
   padding: 8px 28px 8px 10px;
   width: 100%;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--panel-input-bg);
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid var(--panel-input-border);
   border-radius: 0;
-  color: #eee;
+  color: var(--panel-text);
   font-size: 12px;
   outline: none;
 }
 
 .boat-panel__search::placeholder {
-  color: #888;
+  color: var(--panel-text-faint);
 }
 
 .boat-panel__search:focus {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--panel-input-border);
+  background: var(--panel-input-focus-bg);
 }
 
 .boat-panel__search-clear {
@@ -464,7 +505,7 @@ main {
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #999;
+  color: var(--panel-text-faint);
   font-size: 16px;
   cursor: pointer;
   padding: 0 4px;
@@ -472,20 +513,20 @@ main {
 }
 
 .boat-panel__search-clear:hover {
-  color: #fff;
+  color: var(--panel-text);
 }
 
 .boat-panel__divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--panel-border);
   margin: 4px 0;
 }
 
 .boat-card {
-  background: rgba(26, 26, 46, 0.9);
+  background: var(--panel-bg);
   border-left: 4px solid #fff;
   border-radius: 4px;
-  color: #eee;
+  color: var(--panel-text);
   font-size: 12px;
   width: 240px;
   display: flex;
@@ -495,14 +536,12 @@ main {
 
 .boat-card--ours {
   border-left-width: 6px;
-  background: rgba(0, 60, 90, 0.9);
+  background: var(--card-ours-bg);
 }
 
 .boat-card--active {
-  outline: 2px solid rgba(255, 255, 255, 0.8);
-  outline-offset: -1px;
-  background: rgba(50, 50, 80, 0.95);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+  background: var(--card-active-bg);
+  box-shadow: inset -2px 0 0 0 #22c55e, inset 0 -2px 0 0 #22c55e, inset 0 2px 0 0 #22c55e, 0 0 8px rgba(34, 197, 94, 0.3);
 }
 
 .boat-card__body {
@@ -519,8 +558,8 @@ main {
   width: 32px;
   background: none;
   border: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  color: #999;
+  border-left: 1px solid var(--panel-border);
+  color: var(--panel-text-faint);
   font-size: 16px;
   cursor: pointer;
   line-height: 1;
@@ -529,7 +568,7 @@ main {
 }
 
 .boat-card__star:hover {
-  background: rgba(255, 200, 0, 0.15);
+  background: var(--star-hover-bg);
   color: #ffd700;
 }
 
@@ -553,12 +592,12 @@ main {
 
 .boat-card__number {
   margin-left: auto;
-  color: #999;
+  color: var(--panel-text-faint);
   font-size: 11px;
 }
 
 .boat-card__desc {
-  color: #aaa;
+  color: var(--panel-text-dim);
   font-size: 11px;
   margin-top: 3px;
   overflow: hidden;
@@ -574,6 +613,6 @@ main {
 }
 
 .boat-card__stats--empty {
-  color: #777;
+  color: var(--panel-text-faint);
   font-style: italic;
 }
