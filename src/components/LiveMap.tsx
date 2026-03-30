@@ -304,14 +304,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             showWindArrow={
               data.twa !== undefined && data.tws !== undefined && data.tws > 0
             }
+            number={crew?.start_number}
           />,
         );
       } else {
         // Create new marker
         const el = document.createElement("div");
         el.className = "vessel-marker";
-        el.style.width = "24px";
-        el.style.height = "35px";
+        el.style.width = "36px";
+        el.style.height = "50px";
 
         // Generate initial boat icon
         const rotation = data.hdg || data.cog || 0;
@@ -331,6 +332,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             showWindArrow={
               data.twa !== undefined && data.tws !== undefined && data.tws > 0
             }
+            number={crew?.start_number}
           />,
         );
 
@@ -353,11 +355,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       }
     });
 
-    // Show/hide markers based on highlighted filter
+    // Show/hide markers and set z-index for highlighted/selected vessels
     Object.entries(markersRef.current).forEach(([vesselId, marker]) => {
-      const isHighlighted = highlightedCrews.has(parseInt(vesselId));
+      const vid = parseInt(vesselId);
+      const isHighlighted = highlightedCrews.has(vid);
+      const isSelected = activeBoatId === vid;
       const shouldShow = !showOnlyHighlighted || isHighlighted;
-      marker.getElement().style.display = shouldShow ? "" : "none";
+      const el = marker.getElement();
+      el.style.display = shouldShow ? "" : "none";
+      el.style.zIndex = isSelected ? "3" : isHighlighted ? "2" : "1";
     });
 
     // Remove markers for vessels not in the current data
@@ -411,8 +417,8 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         // Ghost marker at future position
         const el = document.createElement("div");
         el.className = "vessel-marker vessel-marker--future";
-        el.style.width = "24px";
-        el.style.height = "35px";
+        el.style.width = "36px";
+        el.style.height = "50px";
         el.style.pointerEvents = "none";
 
         const root = createRoot(el);
