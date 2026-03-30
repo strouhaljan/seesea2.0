@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
@@ -49,9 +49,11 @@ interface LiveMapProps {
   activeBoatId: number | null;
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
+  controlsOpen: boolean;
+  onToggleControls: () => void;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, activeBoatId, onBoatClick, onClearActive, controlsOpen, onToggleControls }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -528,6 +530,24 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     }
   }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes]);
 
+  // Swipe right on controls panel to close
+  const controlsTouchRef = useRef<{ startX: number; startY: number } | null>(null);
+  const handleControlsTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    controlsTouchRef.current = { startX: touch.clientX, startY: touch.clientY };
+  }, []);
+  const handleControlsTouchEnd = useCallback((e: React.TouchEvent) => {
+    const ref = controlsTouchRef.current;
+    if (!ref) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - ref.startX;
+    const dy = Math.abs(touch.clientY - ref.startY);
+    controlsTouchRef.current = null;
+    if (dx > 60 && dx > dy && controlsOpen) {
+      onToggleControls();
+    }
+  }, [controlsOpen, onToggleControls]);
+
   return (
     <div className="map-wrapper">
       <div ref={mapContainer} className="map-container" />
@@ -560,7 +580,11 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         </button>
 
 
-        <div className="controls-panel">
+        <div
+          className={`controls-panel ${controlsOpen ? "" : "controls-panel--hidden"}`}
+          onTouchStart={handleControlsTouchStart}
+          onTouchEnd={handleControlsTouchEnd}
+        >
           <div className="controls-panel__row">
             <span className="controls-panel__label">SeeSea</span>
           <label className="toggle-switch">

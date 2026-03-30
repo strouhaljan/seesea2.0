@@ -99,6 +99,23 @@ header h1 {
   justify-content: center;
 }
 
+.header__controls-toggle {
+  grid-column: 3;
+  grid-row: 1 / -1;
+  align-self: center;
+  justify-self: end;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  color: var(--panel-text-muted);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .main-nav {
   grid-column: 2;
   display: flex;
@@ -313,6 +330,7 @@ main {
 
 /* Controls panel */
 .controls-panel {
+  transition: transform 0.25s ease, opacity 0.25s ease;
   background: var(--panel-bg);
   color: var(--panel-text);
   border-radius: 6px;
@@ -321,6 +339,12 @@ main {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.controls-panel--hidden {
+  transform: translateX(calc(100% + 10px));
+  opacity: 0;
+  pointer-events: none;
 }
 
 .controls-panel__row {
