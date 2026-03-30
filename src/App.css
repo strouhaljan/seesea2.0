@@ -340,6 +340,11 @@ main {
   gap: 8px;
 }
 
+.controls-panel__row--disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .controls-panel__label {
   color: var(--panel-text-muted);
   font-size: 11px;

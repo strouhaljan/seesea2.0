@@ -201,7 +201,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
 
   // Wind overlay lifecycle
   useEffect(() => {
-    if (!mapLoaded || !map.current || !showWind) {
+    if (!mapLoaded || !map.current || !showWind || isHistoryMode) {
       windOverlayRef.current?.hide();
       return;
     }
@@ -233,7 +233,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       clearInterval(refreshInterval);
       windOverlayRef.current?.hide();
     };
-  }, [mapLoaded, showWind, windModel, blendBoats, vesselsData]);
+  }, [mapLoaded, showWind, windModel, blendBoats, vesselsData, isHistoryMode]);
 
   // Snapshot vessel data with receive timestamp for interpolation
   useEffect(() => {
@@ -710,18 +710,19 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
           </div>
         </div>
         <div className="controls-panel__divider" />
-        <div className="controls-panel__row">
+        <div className={`controls-panel__row${isHistoryMode ? " controls-panel__row--disabled" : ""}`}>
           <span className="controls-panel__label">Wind overlay</span>
           <label className="toggle-switch">
             <input
               type="checkbox"
               checked={showWind}
+              disabled={isHistoryMode}
               onChange={() => setShowWind((prev) => !prev)}
             />
             <span className="toggle-switch__slider" />
           </label>
         </div>
-        {showWind && (
+        {showWind && !isHistoryMode && (
           <>
             <div className="controls-panel__row">
               <label className="controls-panel__radio">
