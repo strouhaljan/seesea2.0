@@ -63,11 +63,10 @@ db.exec(`
   )
 `);
 
-const stmtGet = db.prepare("SELECT data, fetched_at FROM chunks WHERE event_id = ? AND hour_start = ?");
 const stmtUpsert = db.prepare(
   "INSERT OR REPLACE INTO chunks (event_id, hour_start, data, fetched_at) VALUES (?, ?, ?, ?)",
 );
-const stmtAllForEvent = db.prepare("SELECT hour_start, data, fetched_at FROM chunks WHERE event_id = ?");
+const stmtDeleteOlderThan = db.prepare("DELETE FROM chunks WHERE fetched_at < ?");
 
 // --- In-memory cache (fast path) ---
 const memCache = new Map<string, CacheChunk>();
@@ -145,13 +144,7 @@ async function fetchChunk(
   }
 }
 
-const warmingInProgress = new Set<string>();
-
 async function warmCache(eventId: string, fromTime: number) {
-  const key = `${eventId}:${fromTime}`;
-  if (warmingInProgress.has(key)) return;
-  warmingInProgress.add(key);
-
   const nowSeconds = Math.floor(Date.now() / 1000);
   const firstHour = floorHour(fromTime);
   const lastHour = floorHour(nowSeconds);
@@ -185,15 +178,11 @@ const router = Router();
 
 router.get("/:eventId", async (req, res) => {
   const { eventId } = req.params;
-  const { time, trail, warmFrom } = req.query;
+  const { time, trail } = req.query;
 
   if (!time) {
     res.status(400).json({ error: "time query param required" });
     return;
-  }
-
-  if (warmFrom) {
-    warmCache(eventId, Number(warmFrom)).catch(() => {});
   }
 
   const targetTime = Number(time);
@@ -215,8 +204,7 @@ router.get("/:eventId", async (req, res) => {
     if (!chunk) continue;
     for (const [vesselId, points] of Object.entries(chunk.objects)) {
       const filtered = points
-        .filter((p) => p.time >= windowStart && p.time <= windowEnd)
-        .map(slim);
+        .filter((p) => p.time >= windowStart && p.time <= windowEnd);
       if (filtered.length === 0) continue;
       if (!merged[vesselId]) merged[vesselId] = [];
       merged[vesselId].push(...filtered);
@@ -230,4 +218,14 @@ router.get("/:eventId", async (req, res) => {
   res.json({ objects: merged });
 });
 
+/** Delete SQLite chunks older than the given age (default 7 days). */
+function purgeOldChunks(maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
+  const cutoff = Date.now() - maxAgeMs;
+  const result = stmtDeleteOlderThan.run(cutoff);
+  if (result.changes > 0) {
+    console.log(`Purged ${result.changes} stale chunks from SQLite`);
+  }
+}
+
+export { warmCache, purgeOldChunks };
 export default router;
