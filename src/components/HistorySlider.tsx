@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { formatDate } from "../utils/dateUtils";
 import "./HistorySlider.css";
 
@@ -93,60 +94,51 @@ const HistorySlider = ({
 
   if (endTime <= startTime) return null;
 
-  if (!expanded) {
-    return (
-      <div className="history-slider history-slider--collapsed">
+  return (
+    <div className={`history-slider ${expanded ? "" : "history-slider--collapsed"} ${!isLive ? "history-slider--active" : ""}`}>
+      {expanded && (
+        <div className="history-slider__panel">
+          <div className="history-slider__time">
+            {isLive ? (
+              <span className="history-slider__live-badge">LIVE</span>
+            ) : (
+              <>
+                <span className="history-slider__timestamp">
+                  {formatDate(currentTime)}
+                </span>
+                <button className="history-slider__go-live" onClick={handleGoLive}>
+                  Go live
+                </button>
+              </>
+            )}
+          </div>
+          <div className="history-slider__controls">
+            <button className="history-slider__step-btn" {...back5}>«</button>
+            <button className="history-slider__step-btn" {...back1}>‹</button>
+            <input
+              ref={sliderRef}
+              type="range"
+              className="history-slider__input"
+              min={startTime}
+              max={max}
+              value={sliderValue}
+              onChange={handleChange}
+            />
+            <button className="history-slider__step-btn" {...fwd1}>›</button>
+            <button className="history-slider__step-btn" {...fwd5}>»</button>
+          </div>
+        </div>
+      )}
+      <div className="history-slider__ear-wrapper">
         <button
           className={`history-slider__toggle ${isLive ? "" : "history-slider__toggle--active"}`}
-          onClick={() => setExpanded(true)}
+          onClick={() => {
+            if (expanded) { handleGoLive(); setExpanded(false); }
+            else setExpanded(true);
+          }}
         >
-          {isLive ? (
-            <span className="history-slider__live-badge">LIVE</span>
-          ) : (
-            <span className="history-slider__timestamp">{formatDate(currentTime)}</span>
-          )}
+          {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`history-slider ${isLive ? "" : "history-slider--active"}`}>
-      <div className="history-slider__time">
-        {isLive ? (
-          <span className="history-slider__live-badge">LIVE</span>
-        ) : (
-          <>
-            <span className="history-slider__timestamp">
-              {formatDate(currentTime)}
-            </span>
-            <button className="history-slider__go-live" onClick={handleGoLive}>
-              Go live
-            </button>
-          </>
-        )}
-        <button
-          className="history-slider__close"
-          onClick={() => setExpanded(false)}
-          title="Hide slider"
-        >
-          ✕
-        </button>
-      </div>
-      <div className="history-slider__controls">
-        <button className="history-slider__step-btn" {...back5}>«</button>
-        <button className="history-slider__step-btn" {...back1}>‹</button>
-        <input
-          ref={sliderRef}
-          type="range"
-          className="history-slider__input"
-          min={startTime}
-          max={max}
-          value={sliderValue}
-          onChange={handleChange}
-        />
-        <button className="history-slider__step-btn" {...fwd1}>›</button>
-        <button className="history-slider__step-btn" {...fwd5}>»</button>
       </div>
     </div>
   );
