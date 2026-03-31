@@ -24,6 +24,7 @@ services:
     environment:
       - PORT=3001
       - CACHE_DB_PATH=/app/data/cache.db
+      - EVENT_SLUG=${VITE_EVENT_SLUG}
 
 volumes:
   server-data:

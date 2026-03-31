@@ -59,7 +59,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   const [trailMinutes, setTrailMinutes] = useState(
     () => parseInt(localStorage.getItem("trailMinutes") || "0", 10),
   );
-  const { historyData, historyTails } = useHistoryData(eventId, selectedTime, trailMinutes, legStartTime);
+  const { historyData, historyTails } = useHistoryData(eventId, selectedTime, trailMinutes);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
 
   // Sync trailMinutes from localStorage (LiveMap dispatches trailMinutesChanged)

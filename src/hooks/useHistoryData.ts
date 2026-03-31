@@ -11,19 +11,16 @@ interface UseHistoryDataResult {
 /**
  * Fetches vessel positions for a specific point in time via the server.
  * The server caches 1-hour chunks and returns only the needed slice.
- * On the first request, triggers background warming of the full history.
  */
 export function useHistoryData(
   eventId: number | null,
   selectedTime: number | null,
   trailMinutes: number,
-  legStartTime: number,
 ): UseHistoryDataResult {
   const [historyData, setHistoryData] = useState<Record<string, VesselDataPoint>>({});
   const [historyTails, setHistoryTails] = useState<TailsData>({});
   const [loading, setLoading] = useState(false);
   const abortRef = useRef<AbortController>(undefined);
-  const warmedRef = useRef(false);
 
   const fetchData = useCallback(
     async (time: number, trail: number) => {
@@ -39,11 +36,6 @@ export function useHistoryData(
           time: String(time),
           trail: String(trail),
         });
-        // On first request, tell server to warm the full cache
-        if (!warmedRef.current && legStartTime > 0) {
-          params.set("warmFrom", String(legStartTime));
-          warmedRef.current = true;
-        }
         const res = await fetch(
           `/api/data2/${eventId}?${params}`,
           { signal: controller.signal },
@@ -80,7 +72,7 @@ export function useHistoryData(
         setLoading(false);
       }
     },
-    [eventId, legStartTime],
+    [eventId],
   );
 
   useEffect(() => {
