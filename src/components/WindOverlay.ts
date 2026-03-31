@@ -44,7 +44,6 @@ export class WindOverlay {
     this.canvas.style.pointerEvents = "none";
 
     this.ctx = this.canvas.getContext("2d")!;
-    this.syncSize();
 
     this.map.on("resize", this.syncSize);
     this.map.on("move", this.onCameraChange);
@@ -83,7 +82,8 @@ export class WindOverlay {
   }
 
   private syncSize = (): void => {
-    const mapCanvas = this.map.getCanvas();
+    const mapCanvas = this.map.getCanvas?.();
+    if (!mapCanvas) return;
     const w = mapCanvas.width;
     const h = mapCanvas.height;
     if (this.canvas.width !== w || this.canvas.height !== h) {
