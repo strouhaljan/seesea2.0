@@ -67,7 +67,8 @@ body, html {
 header {
   background-color: var(--panel-bg-solid);
   color: var(--panel-text);
-  padding: 0.35rem 0.75rem;
+  padding: env(safe-area-inset-top, 0) 0.75rem 0.35rem;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.35rem);
   display: grid;
   grid-template-columns: 40px 1fr 40px;
   align-items: center;
