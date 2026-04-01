@@ -53,6 +53,8 @@ const HistorySlider = ({
   const [expanded, setExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const playbackSpeedRef = useRef(playbackSpeed);
+  playbackSpeedRef.current = playbackSpeed;
   const playIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const isLive = currentTime === null;
   const sliderRef = useRef<HTMLInputElement>(null);
@@ -103,15 +105,14 @@ const HistorySlider = ({
   const fwd1 = useRepeatAction(useCallback(() => { stopPlayback(); step(60); }, [step, stopPlayback]));
   const fwd5 = useRepeatAction(useCallback(() => { stopPlayback(); step(300); }, [step, stopPlayback]));
 
-  // Playback interval
+  // Playback interval — reads speed from ref so changing speed doesn't restart the interval
   useEffect(() => {
     if (!isPlaying) return;
     playIntervalRef.current = setInterval(() => {
       onTimeChange((prev) => {
         const base = prev ?? startTime;
-        const next = base + playbackSpeed;
+        const next = base + playbackSpeedRef.current;
         if (next > endTime) {
-          // Reached end — stop playback
           setTimeout(stopPlayback, 0);
           return null;
         }
@@ -119,7 +120,7 @@ const HistorySlider = ({
       });
     }, 1000);
     return () => clearInterval(playIntervalRef.current);
-  }, [isPlaying, playbackSpeed, startTime, endTime, onTimeChange, stopPlayback]);
+  }, [isPlaying, startTime, endTime, onTimeChange, stopPlayback]);
 
   // Clean up on unmount
   useEffect(() => () => clearInterval(playIntervalRef.current), []);
