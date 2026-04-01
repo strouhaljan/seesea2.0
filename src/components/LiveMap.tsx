@@ -9,7 +9,7 @@ import { useEventConfig } from "../hooks/useEventConfig";
 import { MAP_STYLES, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID, getSavedTheme, saveTheme, MapTheme } from "../utils/mapConfig";
 import { OUR_BOAT } from "../config";
 import { WindOverlay } from "./WindOverlay";
-import { fetchWindGrid, blendBoatData, WindModel } from "../utils/windGrid";
+import { fetchWindGrids, blendBoatData, lerpGrids, WindModel, CompositeGrid } from "../utils/windGrid";
 import { TailsData } from "../hooks/useTails";
 import { LegMarker } from "../hooks/useLegMarkers";
 
@@ -17,7 +17,7 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 export type ColorMode = "seesea" | "wind";
 
-const FUTURE_STEPS = [15, 30, 45, 60]; // slider tick values in minutes
+const FUTURE_STEPS = [30, 60, 90, 120, 150, 180]; // slider tick values in minutes
 const FUTURE_LINE_SOURCE = "future-position-lines";
 const FUTURE_LINE_LAYER = "future-position-lines-layer";
 const TAIL_LINE_SOURCE = "tail-lines";
@@ -213,7 +213,15 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
 
     const loadGrid = async () => {
       try {
-        let grid = await fetchWindGrid(windModel);
+        const grids = await fetchWindGrids(windModel);
+        // When future position is active, interpolate between hourly forecast grids
+        let grid = grids[0];
+        if (futureMinutes > 0 && grids.length > 1) {
+          const hours = futureMinutes / 60;
+          const idx = Math.min(Math.floor(hours), grids.length - 2);
+          const t = hours - idx;
+          grid = lerpGrids(grids[idx], grids[idx + 1], t);
+        }
         if (blendBoats && Object.keys(vesselsData).length > 0) {
           grid = blendBoatData(grid, vesselsData);
         }
@@ -223,6 +231,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         } else {
           windOverlayRef.current.updateGrid(grid);
         }
+        windOverlayRef.current.showBarbs = futureMinutes > 0;
         windOverlayRef.current.show();
       } catch (err) {
         console.error("Failed to load wind grid:", err);
@@ -236,7 +245,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
       clearInterval(refreshInterval);
       windOverlayRef.current?.hide();
     };
-  }, [mapLoaded, showWind, windModel, blendBoats, vesselsData, isHistoryMode]);
+  }, [mapLoaded, showWind, windModel, blendBoats, vesselsData, isHistoryMode, futureMinutes]);
 
   // Keep followedBoatId ref in sync for the animation loop
   // Fly to the vessel when follow starts
@@ -728,8 +737,8 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             type="range"
             className="future-slider"
             min={0}
-            max={60}
-            step={15}
+            max={180}
+            step={30}
             value={futureMinutes}
             onChange={(e) => setFutureMinutes(parseInt(e.target.value, 10))}
           />
