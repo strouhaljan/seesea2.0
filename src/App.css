@@ -45,19 +45,24 @@
   padding: 0;
 }
 
-body, html {
+html, body {
+  height: 100%;
   margin: 0;
   width: 100%;
   touch-action: pan-x pan-y;
   overscroll-behavior: none;
+  overflow: hidden;
   background: var(--panel-bg-solid, #1a1a2e);
+}
+
+#root {
+  height: 100%;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
-  position: fixed;
-  inset: 0;
+  height: 100%;
 }
 
 header {
