@@ -65,6 +65,13 @@ body, html {
   width: 100%;
 }
 
+@media all and (display-mode: standalone) {
+  .app-container {
+    position: fixed;
+    inset: 0;
+  }
+}
+
 header {
   background-color: var(--panel-bg-solid);
   color: var(--panel-text);
