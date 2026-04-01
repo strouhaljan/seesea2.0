@@ -1,56 +1,23 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-import mapboxgl, { LngLatBounds, Map as MapboxMap, Marker } from "mapbox-gl";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
-import BoatIcon from "./BoatIcon";
-import { createRoot } from "react-dom/client";
-import { Root } from "react-dom/client";
 import { useEventConfig } from "../hooks/useEventConfig";
-import { MAP_STYLES, DEFAULT_CENTER, getSavedZoom, saveZoom, CENTER_VESSEL_ID, getSavedTheme, saveTheme, MapTheme } from "../utils/mapConfig";
-import { OUR_BOAT } from "../config";
-import { WindOverlay } from "./WindOverlay";
-import { fetchWindGrids, blendBoatData, lerpGrids, WindModel, CompositeGrid } from "../utils/windGrid";
+import { MAP_STYLES, DEFAULT_CENTER, getSavedZoom, saveZoom, getSavedTheme } from "../utils/mapConfig";
 import { TailsData } from "../hooks/useTails";
 import { LegMarker } from "../hooks/useLegMarkers";
+import { useMapControls } from "../hooks/useMapControls";
+import { useVesselMarkers } from "../hooks/useVesselMarkers";
+import { useFutureProjections } from "../hooks/useFutureProjections";
+import { useTailLayer } from "../hooks/useTailLayer";
+import { useLegLayer } from "../hooks/useLegLayer";
+import { useWindOverlay } from "../hooks/useWindOverlay";
+import { useFollowVessel } from "../hooks/useFollowVessel";
+import { MapControls } from "./MapControls";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-export type ColorMode = "seesea" | "wind";
-
-const FUTURE_STEPS = [30, 60, 90, 120, 150, 180]; // slider tick values in minutes
-const FUTURE_LINE_SOURCE = "future-position-lines";
-const FUTURE_LINE_LAYER = "future-position-lines-layer";
-const TAIL_LINE_SOURCE = "tail-lines";
-const TAIL_LINE_LAYER = "tail-lines-layer";
-const TRAIL_STEPS = [15, 30, 60, 120, 180]; // minutes
-const LEG_LINE_SOURCE = "leg-lines";
-const LEG_LINE_LAYER = "leg-lines-layer";
-const LEG_POINT_SOURCE = "leg-points";
-const LEG_POINT_LAYER = "leg-points-layer";
-const LEG_LABEL_LAYER = "leg-labels-layer";
-
-const LEG_MARKER_COLORS: Record<string, string> = {
-  start: "#00cc44",
-  finish: "#cc0000",
-  line: "#ff8800",
-  buoy: "#ffcc00",
-  dtf: "#8888ff",
-};
-
-/** Calculate a future position given current coords, speed (knots), and course (degrees from north). */
-function futurePosition(
-  coords: [number, number],
-  sogKnots: number,
-  cogDeg: number,
-  minutes: number,
-): [number, number] {
-  const distanceNm = sogKnots * (minutes / 60);
-  const cogRad = (cogDeg * Math.PI) / 180;
-  const latRad = (coords[1] * Math.PI) / 180;
-  const newLat = coords[1] + (distanceNm * Math.cos(cogRad)) / 60;
-  const newLng = coords[0] + (distanceNm * Math.sin(cogRad)) / (60 * Math.cos(latRad));
-  return [newLng, newLat];
-}
+export type { ColorMode } from "../types/map";
 
 export interface LiveMapHandle {
   flyTo: (coords: [number, number]) => void;
@@ -71,87 +38,18 @@ interface LiveMapProps {
   onToggleControls: () => void;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, legMarkers, activeBoatId, followedBoatId, onBoatClick, onClearActive, onStopFollow, isHistoryMode = false, controlsOpen, onToggleControls }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
+  vesselsData, tails, trackLengthMax, legMarkers,
+  activeBoatId, followedBoatId,
+  onBoatClick, onClearActive, onStopFollow,
+  isHistoryMode = false, controlsOpen, onToggleControls,
+}, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const markersRef = useRef<Record<string, Marker>>({});
-  const [colorMode, setColorMode] = useState<ColorMode>(
-    () => (localStorage.getItem("colorMode") as ColorMode) || "seesea"
-  );
-  const [showOnlyHighlighted, setShowOnlyHighlighted] = useState(
-    () => localStorage.getItem("showOnlyHighlighted") === "true"
-  );
-  const [showWind, setShowWind] = useState(
-    () => localStorage.getItem("showWind") === "true"
-  );
-  const [windModel, setWindModel] = useState<WindModel>(
-    () => (localStorage.getItem("windModel") as WindModel) || "icon_2i"
-  );
-  const [blendBoats, setBlendBoats] = useState(
-    () => localStorage.getItem("blendBoats") === "true"
-  );
-  const [futureMinutes, setFutureMinutes] = useState(
-    () => parseInt(localStorage.getItem("futureMinutes") || "0", 10)
-  );
-  const [trailMinutes, setTrailMinutes] = useState(
-    () => parseInt(localStorage.getItem("trailMinutes") || "0", 10)
-  );
-  const [mapTheme, setMapTheme] = useState<MapTheme>(getSavedTheme);
-  const rootsRef = useRef<Record<string, Root>>({});
-  const futureMarkersRef = useRef<Record<string, Marker>>({});
-  const futureRootsRef = useRef<Record<string, Root>>({});
-  const hasCenteredRef = useRef(false);
-  const vesselsSnapshotRef = useRef<{ data: Record<string, VesselDataPoint>; receivedAt: number }>({ data: {}, receivedAt: 0 });
-  const windOverlayRef = useRef<WindOverlay | null>(null);
-  const followedBoatIdRef = useRef<number | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
 
-  useEffect(() => {
-    localStorage.setItem("colorMode", colorMode);
-  }, [colorMode]);
-
-  useEffect(() => {
-    localStorage.setItem("showOnlyHighlighted", String(showOnlyHighlighted));
-  }, [showOnlyHighlighted]);
-
-  useEffect(() => {
-    localStorage.setItem("showWind", String(showWind));
-  }, [showWind]);
-
-  useEffect(() => {
-    localStorage.setItem("windModel", windModel);
-  }, [windModel]);
-
-  useEffect(() => {
-    localStorage.setItem("blendBoats", String(blendBoats));
-  }, [blendBoats]);
-
-  useEffect(() => {
-    localStorage.setItem("futureMinutes", String(futureMinutes));
-  }, [futureMinutes]);
-
-  useEffect(() => {
-    localStorage.setItem("trailMinutes", String(trailMinutes));
-    window.dispatchEvent(new Event("trailMinutesChanged"));
-  }, [trailMinutes]);
-
-  // Switch map style when theme changes
-  useEffect(() => {
-    saveTheme(mapTheme);
-    document.documentElement.setAttribute("data-theme", mapTheme);
-    if (!map.current) return;
-    // setStyle removes all custom sources/layers — set mapLoaded to false
-    // so the vessel-update effect re-adds them after the new style loads
-    setMapLoaded(false);
-    map.current.once("style.load", () => setMapLoaded(true));
-    map.current.setStyle(MAP_STYLES[mapTheme]);
-  }, [mapTheme]);
-
-  // Set initial data-theme attribute
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", mapTheme);
-  }, []);
+  const controls = useMapControls();
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
@@ -159,7 +57,20 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     },
   }));
 
-  // Initialize map on component mount
+  // Set initial data-theme attribute
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", controls.mapTheme);
+  }, []);
+
+  // Switch map style when theme changes
+  useEffect(() => {
+    if (!map.current) return;
+    setMapLoaded(false);
+    map.current.once("style.load", () => setMapLoaded(true));
+    map.current.setStyle(MAP_STYLES[controls.mapTheme]);
+  }, [controls.mapTheme]);
+
+  // Initialize map
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -174,664 +85,71 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     });
 
     map.current.touchZoomRotate.disableRotation();
+    map.current.on("load", () => setMapLoaded(true));
+    map.current.on("zoomend", () => { if (map.current) saveZoom(map.current.getZoom()); });
+    map.current.on("click", () => onClearActive());
 
-    map.current.on("load", () => {
-      setMapLoaded(true);
-    });
-
-    map.current.on("zoomend", () => {
-      if (map.current) saveZoom(map.current.getZoom());
-    });
-
-    map.current.on("click", () => {
-      onClearActive();
-    });
-
-    return () => {
-      // Clean up all React roots
-      Object.values(rootsRef.current).forEach((root) => {
-        try { root.unmount(); } catch (e) { console.error("Error unmounting React root:", e); }
-      });
-      Object.values(futureRootsRef.current).forEach((root) => {
-        try { root.unmount(); } catch (e) { /* ignore */ }
-      });
-
-      // Remove the map instance (which will clean up all layers and sources)
-      windOverlayRef.current?.destroy();
-      map.current?.remove();
-    };
+    return () => { map.current?.remove(); };
   }, []);
 
-  // Wind overlay lifecycle
-  useEffect(() => {
-    if (!mapLoaded || !map.current || !showWind || isHistoryMode) {
-      windOverlayRef.current?.hide();
-      return;
-    }
+  const { vesselsSnapshotRef } = useVesselMarkers(map, mapLoaded, {
+    vesselsData, crews, highlightedCrews,
+    showOnlyHighlighted: controls.showOnlyHighlighted,
+    colorMode: controls.colorMode,
+    activeBoatId, followedBoatId, onBoatClick,
+  });
 
-    let refreshInterval: ReturnType<typeof setInterval>;
+  useFutureProjections(map, mapLoaded, {
+    vesselsData,
+    futureMinutes: controls.futureMinutes,
+    isHistoryMode, crews, highlightedCrews,
+    showOnlyHighlighted: controls.showOnlyHighlighted,
+    colorMode: controls.colorMode,
+  });
 
-    const loadGrid = async () => {
-      try {
-        const grids = await fetchWindGrids(windModel);
-        // When future position is active, interpolate between hourly forecast grids
-        let grid = grids[0];
-        if (futureMinutes > 0 && grids.length > 1) {
-          const hours = futureMinutes / 60;
-          const idx = Math.min(Math.floor(hours), grids.length - 2);
-          const t = hours - idx;
-          grid = lerpGrids(grids[idx], grids[idx + 1], t);
-        }
-        if (blendBoats && Object.keys(vesselsData).length > 0) {
-          grid = blendBoatData(grid, vesselsData);
-        }
-        if (!map.current) return;
-        if (!windOverlayRef.current) {
-          windOverlayRef.current = new WindOverlay(map.current, grid);
-        } else {
-          windOverlayRef.current.updateGrid(grid);
-        }
-        windOverlayRef.current.showBarbs = futureMinutes > 0;
-        windOverlayRef.current.show();
-      } catch (err) {
-        console.error("Failed to load wind grid:", err);
-      }
-    };
+  useTailLayer(map, mapLoaded, {
+    tails,
+    trailMinutes: controls.trailMinutes,
+    isHistoryMode, crews, highlightedCrews,
+    showOnlyHighlighted: controls.showOnlyHighlighted,
+  });
 
-    loadGrid();
-    refreshInterval = setInterval(loadGrid, 30 * 60 * 1000);
+  useLegLayer(map, mapLoaded, legMarkers);
 
-    return () => {
-      clearInterval(refreshInterval);
-      windOverlayRef.current?.hide();
-    };
-  }, [mapLoaded, showWind, windModel, blendBoats, vesselsData, isHistoryMode, futureMinutes]);
+  useWindOverlay(map, mapLoaded, {
+    showWind: controls.showWind,
+    windModel: controls.windModel,
+    blendBoats: controls.blendBoats,
+    vesselsData, isHistoryMode,
+    futureMinutes: controls.futureMinutes,
+  });
 
-  // Keep followedBoatId ref in sync for the animation loop
-  // Fly to the vessel when follow starts
-  useEffect(() => {
-    followedBoatIdRef.current = followedBoatId;
-    if (followedBoatId != null && map.current) {
-      const vessel = vesselsSnapshotRef.current.data[String(followedBoatId)];
-      if (vessel?.coords) {
-        const currentZoom = map.current.getZoom();
-        map.current.flyTo({
-          center: vessel.coords,
-          zoom: Math.max(currentZoom, 14),
-          speed: 2,
-        });
-      }
-    }
-  }, [followedBoatId]);
-
-  // Stop following when user drags the map
-  useEffect(() => {
-    if (!map.current) return;
-    const m = map.current;
-    const handleDragStart = () => {
-      if (followedBoatIdRef.current != null) {
-        onStopFollow();
-      }
-    };
-    m.on("dragstart", handleDragStart);
-    return () => { m.off("dragstart", handleDragStart); };
-  }, [onStopFollow]);
-
-  // Snapshot vessel data with receive timestamp for interpolation
-  useEffect(() => {
-    if (Object.keys(vesselsData).length > 0) {
-      vesselsSnapshotRef.current = { data: vesselsData, receivedAt: performance.now() };
-    }
-  }, [vesselsData]);
-
-  // Animate marker positions between data updates using SOG/COG projection
-  // Also re-center map on followed vessel (throttled to once per second)
-  useEffect(() => {
-    if (!mapLoaded) return;
-    let raf = 0;
-    let lastFollowCenter = 0;
-    const tick = () => {
-      const { data, receivedAt } = vesselsSnapshotRef.current;
-      if (receivedAt > 0) {
-        const now = performance.now();
-        const elapsedMin = (now - receivedAt) / 60_000;
-        const followId = followedBoatIdRef.current;
-        for (const [id, vessel] of Object.entries(data)) {
-          const marker = markersRef.current[id];
-          if (!marker || !vessel.coords) continue;
-          const cog = vessel.cog || vessel.hdg || 0;
-          const sog = vessel.sog || 0;
-          let pos = vessel.coords;
-          if (sog > 0 && cog) {
-            pos = futurePosition(vessel.coords, sog, cog, elapsedMin);
-            marker.setLngLat(pos);
-          }
-          // Re-center map on followed vessel (at most once per second)
-          if (followId != null && parseInt(id) === followId && map.current && now - lastFollowCenter > 1000) {
-            const center = map.current.getCenter();
-            const dx = Math.abs(center.lng - pos[0]);
-            const dy = Math.abs(center.lat - pos[1]);
-            if (dx > 0.00005 || dy > 0.00005) {
-              map.current.easeTo({ center: pos, duration: 1000 });
-              lastFollowCenter = now;
-            }
-          }
-        }
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [mapLoaded]);
-
-  // Update markers based on live data
-  useEffect(() => {
-    if (!mapLoaded || !map.current) return;
-
-    // Calculate bounds to fit all vessels
-    let allBounds = new LngLatBounds();
-    let hasValidBounds = false;
-
-    // Track which vessels are currently shown
-    const currentVesselIds = new Set(Object.keys(vesselsData));
-    const existingVesselIds = new Set(Object.keys(markersRef.current));
-
-    // Process each vessel from live data
-    Object.entries(vesselsData).forEach(([vesselId, data]) => {
-      if (!data.coords) return; // Skip if no coords
-
-      // Add to bounds
-      if (!hasValidBounds) {
-        allBounds = new LngLatBounds(
-          data.coords as [number, number],
-          data.coords as [number, number],
-        );
-        hasValidBounds = true;
-      } else {
-        allBounds.extend(data.coords as [number, number]);
-      }
-
-      const crew = crews.find((c) => c.id === parseInt(vesselId));
-      const isHighlighted = highlightedCrews.has(parseInt(vesselId));
-
-      // Update or create marker
-      if (markersRef.current[vesselId]) {
-        // Update existing marker
-        const marker = markersRef.current[vesselId];
-        marker.setLngLat(data.coords as [number, number]);
-
-        // Update rotation
-        const rotation = data.hdg || data.cog || 0;
-        const el = marker.getElement();
-
-        if (!rootsRef.current[vesselId]) {
-          rootsRef.current[vesselId] = createRoot(el);
-        }
-
-        rootsRef.current[vesselId].render(
-          <BoatIcon
-            highlight={isHighlighted}
-            isOurs={crew?.name === OUR_BOAT}
-            selected={activeBoatId === parseInt(vesselId)}
-            followed={followedBoatId === parseInt(vesselId)}
-            color={crew?.track_color}
-            colorMode={colorMode}
-            rotation={rotation}
-            windDirection={data.twa}
-            windSpeed={data.tws}
-            showWindArrow={
-              data.twa !== undefined && data.tws !== undefined && data.tws > 0
-            }
-            number={crew?.start_number}
-          />,
-        );
-      } else {
-        // Create new marker
-        const el = document.createElement("div");
-        el.className = "vessel-marker";
-        el.style.width = "36px";
-        el.style.height = "50px";
-
-        // Generate initial boat icon
-        const rotation = data.hdg || data.cog || 0;
-        const root = createRoot(el);
-        rootsRef.current[vesselId] = root;
-
-        root.render(
-          <BoatIcon
-            highlight={isHighlighted}
-            isOurs={crew?.name === OUR_BOAT}
-            selected={activeBoatId === parseInt(vesselId)}
-            followed={followedBoatId === parseInt(vesselId)}
-            color={crew?.track_color}
-            colorMode={colorMode}
-            rotation={rotation}
-            windDirection={data.twa}
-            windSpeed={data.tws}
-            showWindArrow={
-              data.twa !== undefined && data.tws !== undefined && data.tws > 0
-            }
-            number={crew?.start_number}
-          />,
-        );
-
-        // Click handler to add to side panel
-        el.addEventListener("click", (e) => {
-          e.stopPropagation();
-          onBoatClick(parseInt(vesselId));
-        });
-
-        // Create the marker
-        const marker = new mapboxgl.Marker({
-          element: el,
-          anchor: "center",
-          rotationAlignment: "map",
-        })
-          .setLngLat(data.coords as [number, number])
-          .addTo(map.current!);
-
-        markersRef.current[vesselId] = marker;
-      }
-    });
-
-    // Show/hide markers and set z-index for highlighted/selected vessels
-    Object.entries(markersRef.current).forEach(([vesselId, marker]) => {
-      const vid = parseInt(vesselId);
-      const isHighlighted = highlightedCrews.has(vid);
-      const isSelected = activeBoatId === vid;
-      const shouldShow = !showOnlyHighlighted || isHighlighted;
-      const el = marker.getElement();
-      el.style.display = shouldShow ? "" : "none";
-      el.style.zIndex = isSelected ? "3" : isHighlighted ? "2" : "1";
-    });
-
-    // Remove markers for vessels not in the current data
-    existingVesselIds.forEach((id) => {
-      if (!currentVesselIds.has(id)) {
-        markersRef.current[id].remove();
-        if (rootsRef.current[id]) {
-          delete rootsRef.current[id];
-        }
-        delete markersRef.current[id];
-      }
-    });
-
-    // --- Future position markers & path lines ---
-    // Clean up existing future markers
-    Object.values(futureMarkersRef.current).forEach((m) => m.remove());
-    Object.values(futureRootsRef.current).forEach((r) => {
-      try { r.unmount(); } catch (_) { /* ignore */ }
-    });
-    futureMarkersRef.current = {};
-    futureRootsRef.current = {};
-
-    // Build GeoJSON lines for all vessels
-    const lineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-
-    if (futureMinutes > 0 && !isHistoryMode) {
-      Object.entries(vesselsData).forEach(([vesselId, data]) => {
-        if (!data.coords || !data.sog || data.sog <= 0) return;
-
-        const cog = data.cog || data.hdg || 0;
-        if (!cog) return;
-
-        const isHighlighted = highlightedCrews.has(parseInt(vesselId));
-        const shouldShow = !showOnlyHighlighted || isHighlighted;
-        if (!shouldShow) return;
-
-        const crew = crews.find((c) => c.id === parseInt(vesselId));
-        const coords = data.coords as [number, number];
-        const futureCoords = futurePosition(coords, data.sog, cog, futureMinutes);
-
-        // Path line from current to future position
-        lineFeatures.push({
-          type: "Feature",
-          properties: { color: crew?.track_color || "#888" },
-          geometry: {
-            type: "LineString",
-            coordinates: [coords, futureCoords],
-          },
-        });
-
-        // Ghost marker at future position
-        const el = document.createElement("div");
-        el.className = "vessel-marker vessel-marker--future";
-        el.style.width = "36px";
-        el.style.height = "50px";
-        el.style.pointerEvents = "none";
-
-        const root = createRoot(el);
-        futureRootsRef.current[vesselId] = root;
-
-        root.render(
-          <BoatIcon
-            color={crew?.track_color}
-            colorMode={colorMode}
-            rotation={data.hdg || data.cog || 0}
-            opacity={0.5}
-            label={`${futureMinutes}m`}
-          />,
-        );
-
-        const marker = new mapboxgl.Marker({
-          element: el,
-          anchor: "center",
-          rotationAlignment: "map",
-        })
-          .setLngLat(futureCoords)
-          .addTo(map.current!);
-
-        futureMarkersRef.current[vesselId] = marker;
-      });
-    }
-
-    // Update or create the GeoJSON line source/layer
-    const geojsonData: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
-      type: "FeatureCollection",
-      features: lineFeatures,
-    };
-    const existingSource = map.current.getSource(FUTURE_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
-    if (existingSource) {
-      existingSource.setData(geojsonData);
-    } else {
-      map.current.addSource(FUTURE_LINE_SOURCE, { type: "geojson", data: geojsonData });
-      map.current.addLayer({
-        id: FUTURE_LINE_LAYER,
-        type: "line",
-        source: FUTURE_LINE_SOURCE,
-        paint: {
-          "line-color": ["get", "color"],
-          "line-width": 2,
-          "line-dasharray": [4, 4],
-          "line-opacity": 0.6,
-        },
-      });
-    }
-
-    // --- Tail trail lines ---
-    const tailFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-
-    if (trailMinutes > 0 && Object.keys(tails).length > 0) {
-      const cutoff = isHistoryMode ? 0 : Date.now() / 1000 - trailMinutes * 60;
-      Object.entries(tails).forEach(([vesselId, points]) => {
-        const isHighlighted = highlightedCrews.has(parseInt(vesselId));
-        const shouldShow = !showOnlyHighlighted || isHighlighted;
-        if (!shouldShow) return;
-
-        // Filter points within the time window
-        const filtered = points.filter((p) => p[0] >= cutoff);
-        if (filtered.length < 2) return;
-
-        const crew = crews.find((c) => c.id === parseInt(vesselId));
-        // API returns [timestamp, lng, lat] — MapBox needs [lng, lat]
-        const coords: [number, number][] = filtered.map((p) => [p[1], p[2]]);
-
-        tailFeatures.push({
-          type: "Feature",
-          properties: { color: crew?.track_color || "#888" },
-          geometry: { type: "LineString", coordinates: coords },
-        });
-      });
-    }
-
-    const tailGeojson: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
-      type: "FeatureCollection",
-      features: tailFeatures,
-    };
-    const existingTailSource = map.current.getSource(TAIL_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
-    if (existingTailSource) {
-      existingTailSource.setData(tailGeojson);
-    } else {
-      map.current.addSource(TAIL_LINE_SOURCE, { type: "geojson", data: tailGeojson });
-      map.current.addLayer({
-        id: TAIL_LINE_LAYER,
-        type: "line",
-        source: TAIL_LINE_SOURCE,
-        paint: {
-          "line-color": ["get", "color"],
-          "line-width": 2,
-          "line-opacity": 0.7,
-        },
-      });
-    }
-
-    // --- Leg course markers (start, finish, restricted zones, buoys) ---
-    const legLineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-    const legPointFeatures: GeoJSON.Feature<GeoJSON.Point>[] = [];
-
-    for (const m of legMarkers) {
-      const color = LEG_MARKER_COLORS[m.marker_type] || "#ffffff";
-
-      if (m.lat_2 != null && m.lon_2 != null) {
-        // Line markers: start, finish, restricted zones
-        legLineFeatures.push({
-          type: "Feature",
-          properties: { color, name: m.name, marker_type: m.marker_type },
-          geometry: {
-            type: "LineString",
-            coordinates: [[m.lon, m.lat], [m.lon_2, m.lat_2]],
-          },
-        });
-      } else {
-        // Point markers: buoys, DTF
-        legPointFeatures.push({
-          type: "Feature",
-          properties: { color, name: m.name, marker_type: m.marker_type },
-          geometry: {
-            type: "Point",
-            coordinates: [m.lon, m.lat],
-          },
-        });
-      }
-    }
-
-    const legLineData: GeoJSON.FeatureCollection = {
-      type: "FeatureCollection",
-      features: legLineFeatures,
-    };
-    const legPointData: GeoJSON.FeatureCollection = {
-      type: "FeatureCollection",
-      features: legPointFeatures,
-    };
-
-    const existingLegLineSource = map.current.getSource(LEG_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
-    if (existingLegLineSource) {
-      existingLegLineSource.setData(legLineData);
-    } else {
-      map.current.addSource(LEG_LINE_SOURCE, { type: "geojson", data: legLineData });
-      map.current.addLayer({
-        id: LEG_LINE_LAYER,
-        type: "line",
-        source: LEG_LINE_SOURCE,
-        paint: {
-          "line-color": ["get", "color"],
-          "line-width": 3,
-          "line-opacity": 0.9,
-        },
-      });
-    }
-
-    const existingLegPointSource = map.current.getSource(LEG_POINT_SOURCE) as mapboxgl.GeoJSONSource | undefined;
-    if (existingLegPointSource) {
-      existingLegPointSource.setData(legPointData);
-    } else {
-      map.current.addSource(LEG_POINT_SOURCE, { type: "geojson", data: legPointData });
-      map.current.addLayer({
-        id: LEG_POINT_LAYER,
-        type: "circle",
-        source: LEG_POINT_SOURCE,
-        paint: {
-          "circle-radius": 6,
-          "circle-color": ["get", "color"],
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-        },
-      });
-      map.current.addLayer({
-        id: LEG_LABEL_LAYER,
-        type: "symbol",
-        source: LEG_POINT_SOURCE,
-        layout: {
-          "text-field": ["get", "name"],
-          "text-size": 12,
-          "text-offset": [0, 1.5],
-          "text-anchor": "top",
-        },
-        paint: {
-          "text-color": "#ffffff",
-          "text-halo-color": "#000000",
-          "text-halo-width": 1,
-        },
-      });
-    }
-
-    // Center on target vessel on first load with data
-    if (!hasCenteredRef.current && Object.keys(markersRef.current).length > 0) {
-      hasCenteredRef.current = true;
-      const targetData = vesselsData[CENTER_VESSEL_ID];
-      if (targetData?.coords) {
-        map.current.setCenter(targetData.coords as [number, number]);
-      } else if (hasValidBounds) {
-        map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
-      }
-    }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, followedBoatId, futureMinutes, tails, trailMinutes, legMarkers, isHistoryMode]);
-
+  useFollowVessel(map, mapLoaded, followedBoatId, vesselsSnapshotRef, onStopFollow);
 
   return (
     <div className="map-wrapper">
       <div ref={mapContainer} className="map-container" />
-
-      <div className="controls-stack">
-        <div
-          className={`controls-panel ${controlsOpen ? "" : "controls-panel--hidden"}`}
-        >
-          <div className="controls-panel__row">
-            <span className="controls-panel__label">SeeSea</span>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={colorMode === "wind"}
-              onChange={() => setColorMode(colorMode === "wind" ? "seesea" : "wind")}
-            />
-            <span className="toggle-switch__slider" />
-          </label>
-          <span className="controls-panel__label">Wind</span>
-        </div>
-        <div className="controls-panel__row">
-          <span className="controls-panel__label">Highlighted only</span>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={showOnlyHighlighted}
-              onChange={() => setShowOnlyHighlighted((prev) => !prev)}
-            />
-            <span className="toggle-switch__slider" />
-          </label>
-        </div>
-        <div className="controls-panel__row controls-panel__row--column">
-          <span className="controls-panel__label">
-            Future position{futureMinutes > 0 ? `: ${futureMinutes} min` : ""}
-          </span>
-          <input
-            type="range"
-            className="future-slider"
-            min={0}
-            max={180}
-            step={30}
-            value={futureMinutes}
-            onChange={(e) => setFutureMinutes(parseInt(e.target.value, 10))}
-          />
-          <div className="future-slider__ticks">
-            <span>Off</span>
-            {FUTURE_STEPS.map((m) => (
-              <span key={m}>{m}m</span>
-            ))}
-          </div>
-        </div>
-        <div className="controls-panel__row controls-panel__row--column">
-          <span className="controls-panel__label">
-            Trail{trailMinutes > 0 ? `: ${trailMinutes >= 60 ? `${trailMinutes / 60}h` : `${trailMinutes} min`}` : ""}
-          </span>
-          <input
-            type="range"
-            className="future-slider"
-            min={0}
-            max={trackLengthMax / 60}
-            step={15}
-            value={trailMinutes}
-            onChange={(e) => setTrailMinutes(parseInt(e.target.value, 10))}
-          />
-          <div className="future-slider__ticks">
-            <span>Off</span>
-            {TRAIL_STEPS.filter((m) => m <= trackLengthMax / 60).map((m) => (
-              <span key={m}>{m >= 60 ? `${m / 60}h` : `${m}m`}</span>
-            ))}
-          </div>
-        </div>
-        <div className="controls-panel__divider" />
-        <div className={`controls-panel__row${isHistoryMode ? " controls-panel__row--disabled" : ""}`}>
-          <span className="controls-panel__label">Wind overlay</span>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={showWind}
-              disabled={isHistoryMode}
-              onChange={() => setShowWind((prev) => !prev)}
-            />
-            <span className="toggle-switch__slider" />
-          </label>
-        </div>
-        {showWind && !isHistoryMode && (
-          <>
-            <div className="controls-panel__row">
-              <label className="controls-panel__radio">
-                <input
-                  type="radio"
-                  name="windModel"
-                  checked={windModel === "icon_2i"}
-                  onChange={() => setWindModel("icon_2i")}
-                />
-                ICON-2I
-              </label>
-              <label className="controls-panel__radio">
-                <input
-                  type="radio"
-                  name="windModel"
-                  checked={windModel === "ecmwf"}
-                  onChange={() => setWindModel("ecmwf")}
-                />
-                ECMWF
-              </label>
-            </div>
-            <div className="controls-panel__row">
-              <span className="controls-panel__label">Blend boats</span>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={blendBoats}
-                  onChange={() => setBlendBoats((prev) => !prev)}
-                />
-                <span className="toggle-switch__slider" />
-              </label>
-            </div>
-          </>
-          )}
-        <div className="controls-panel__divider" />
-        <div className="controls-panel__row">
-          <span className="controls-panel__label">Dark</span>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={mapTheme === "light"}
-              onChange={() => setMapTheme(mapTheme === "dark" ? "light" : "dark")}
-            />
-            <span className="toggle-switch__slider" />
-          </label>
-          <span className="controls-panel__label">Light</span>
-        </div>
-        </div>
-      </div>
+      <MapControls
+        controlsOpen={controlsOpen}
+        colorMode={controls.colorMode}
+        setColorMode={controls.setColorMode}
+        showOnlyHighlighted={controls.showOnlyHighlighted}
+        setShowOnlyHighlighted={controls.setShowOnlyHighlighted}
+        futureMinutes={controls.futureMinutes}
+        setFutureMinutes={controls.setFutureMinutes}
+        trailMinutes={controls.trailMinutes}
+        setTrailMinutes={controls.setTrailMinutes}
+        trackLengthMax={trackLengthMax}
+        showWind={controls.showWind}
+        setShowWind={controls.setShowWind}
+        windModel={controls.windModel}
+        setWindModel={controls.setWindModel}
+        blendBoats={controls.blendBoats}
+        setBlendBoats={controls.setBlendBoats}
+        mapTheme={controls.mapTheme}
+        setMapTheme={controls.setMapTheme}
+        isHistoryMode={isHistoryMode}
+      />
     </div>
   );
 });
