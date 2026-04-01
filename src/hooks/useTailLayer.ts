@@ -2,6 +2,8 @@ import { useEffect, MutableRefObject } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import { TailsData } from "./useTails";
 import { Crew } from "./useEventConfig";
+import { ColorMode } from "../types/map";
+import { getColorBySpeed } from "../utils/wind";
 
 const TAIL_LINE_SOURCE = "tail-lines";
 const TAIL_LINE_LAYER = "tail-lines-layer";
@@ -13,6 +15,7 @@ interface UseTailLayerOptions {
   crews: Crew[];
   highlightedCrews: Set<number>;
   showOnlyHighlighted: boolean;
+  colorMode: ColorMode;
 }
 
 export function useTailLayer(
@@ -20,7 +23,7 @@ export function useTailLayer(
   mapLoaded: boolean,
   options: UseTailLayerOptions,
 ) {
-  const { tails, trailMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted } = options;
+  const { tails, trailMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted, colorMode } = options;
 
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
@@ -38,13 +41,35 @@ export function useTailLayer(
         if (filtered.length < 2) return;
 
         const crew = crews.find((c) => c.id === parseInt(vesselId));
-        const coords: [number, number][] = filtered.map((p) => [p[1], p[2]]);
+        const crewColor = crew?.track_color || "#888";
 
-        tailFeatures.push({
-          type: "Feature",
-          properties: { color: crew?.track_color || "#888" },
-          geometry: { type: "LineString", coordinates: coords },
-        });
+        const useWindColors = colorMode === "wind";
+        const hasWindData = useWindColors && filtered.some((p) => p[3] !== undefined);
+
+        if (hasWindData) {
+          // Create per-segment features colored by wind speed
+          for (let i = 0; i < filtered.length - 1; i++) {
+            const p1 = filtered[i];
+            const p2 = filtered[i + 1];
+            const windSpeed = p1[3];
+            tailFeatures.push({
+              type: "Feature",
+              properties: { color: getColorBySpeed(windSpeed) },
+              geometry: {
+                type: "LineString",
+                coordinates: [[p1[1], p1[2]], [p2[1], p2[2]]],
+              },
+            });
+          }
+        } else {
+          // Single LineString with crew color
+          const coords: [number, number][] = filtered.map((p) => [p[1], p[2]]);
+          tailFeatures.push({
+            type: "Feature",
+            properties: { color: crewColor },
+            geometry: { type: "LineString", coordinates: coords },
+          });
+        }
       });
     }
 
@@ -68,5 +93,5 @@ export function useTailLayer(
         },
       });
     }
-  }, [mapLoaded, tails, trailMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted]);
+  }, [mapLoaded, tails, trailMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted, colorMode]);
 }

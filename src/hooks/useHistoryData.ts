@@ -57,7 +57,7 @@ export function useHistoryData(
 
           const tailPoints: TailPoint[] = points
             .filter((p) => p.time <= time)
-            .map((p) => [p.time, p.coords[0], p.coords[1]]);
+            .map((p) => [p.time, p.coords[0], p.coords[1], p.tws]);
           if (tailPoints.length > 0) {
             tails[vesselId] = tailPoints;
           }

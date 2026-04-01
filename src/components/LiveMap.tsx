@@ -113,6 +113,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     trailMinutes: controls.trailMinutes,
     isHistoryMode, crews, highlightedCrews,
     showOnlyHighlighted: controls.showOnlyHighlighted,
+    colorMode: controls.colorMode,
   });
 
   useLegLayer(map, mapLoaded, legMarkers);
