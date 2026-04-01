@@ -45,30 +45,29 @@
   padding: 0;
 }
 
-html, body {
-  height: 100%;
-  margin: 0;
+body, html {
+  height: 100dvh;
   width: 100%;
   touch-action: pan-x pan-y;
   overscroll-behavior: none;
-  overflow: hidden;
-  background: var(--panel-bg-solid, #1a1a2e);
 }
 
 #root {
   height: 100%;
+  width: 100%;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
 }
 
 header {
   background-color: var(--panel-bg-solid);
   color: var(--panel-text);
-  padding: env(safe-area-inset-top, 0) 0.75rem 0.35rem;
+  padding: 0.35rem 0.75rem;
   padding-top: calc(env(safe-area-inset-top, 0px) + 0.35rem);
   display: grid;
   grid-template-columns: 40px 1fr 40px;
@@ -221,7 +220,7 @@ main {
 
 .live-dot {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: 12px;
   left: 12px;
   width: 8px;
   height: 8px;
@@ -302,7 +301,7 @@ main {
 /* Controls stack (reset button + controls panel) */
 .controls-stack {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  bottom: 20px;
   right: 10px;
   z-index: 10;
   display: flex;
@@ -435,7 +434,7 @@ main {
   position: absolute;
   top: 0;
   left: 0;
-  bottom: env(safe-area-inset-bottom, 0px);
+  bottom: 0;
   z-index: 10;
   pointer-events: auto;
   transform: translateX(0);
@@ -558,7 +557,7 @@ main {
 
 .follow-indicator {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: 12px;
   left: 24px;
   z-index: 10;
   display: flex;
