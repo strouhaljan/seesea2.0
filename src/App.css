@@ -62,8 +62,8 @@ body, html {
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
+  position: fixed;
+  inset: 0;
 }
 
 header {
@@ -153,9 +153,8 @@ main {
 }
 
 .map-container {
-  position: absolute;
-  inset: 0;
-  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+  height: 100%;
+  width: 100%;
 }
 
 .loading, .error {
@@ -223,7 +222,7 @@ main {
 
 .live-dot {
   position: absolute;
-  bottom: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   left: 12px;
   width: 8px;
   height: 8px;
@@ -304,7 +303,7 @@ main {
 /* Controls stack (reset button + controls panel) */
 .controls-stack {
   position: absolute;
-  bottom: 20px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
   right: 10px;
   z-index: 10;
   display: flex;
@@ -437,7 +436,7 @@ main {
   position: absolute;
   top: 0;
   left: 0;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
   z-index: 10;
   pointer-events: auto;
   transform: translateX(0);
@@ -560,7 +559,7 @@ main {
 
 .follow-indicator {
   position: absolute;
-  bottom: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   left: 24px;
   z-index: 10;
   display: flex;
