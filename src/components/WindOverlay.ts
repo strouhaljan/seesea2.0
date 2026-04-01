@@ -327,7 +327,7 @@ export class WindOverlay {
         const sx = px.x * dpr;
         const sy = px.y * dpr;
 
-        const angle = Math.atan2(-uVal, vVal);
+        const angle = Math.atan2(uVal, vVal);
         const color = getColorBySpeed(speedKnots);
 
         const tipX = sx + Math.sin(angle) * arrowLen;
