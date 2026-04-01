@@ -166,22 +166,26 @@ const HistorySlider = ({
             )}
           </div>
           <div className="history-slider__controls">
-            <button className="history-slider__step-btn" {...back5}>«</button>
-            <button className="history-slider__step-btn" {...back1}>‹</button>
-            <button
-              className={`history-slider__play-btn ${isPlaying ? "history-slider__play-btn--active" : ""}`}
-              onClick={togglePlayback}
-              title={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-            </button>
-            <button
-              className="history-slider__speed-btn"
-              onClick={cycleSpeed}
-              title="Playback speed"
-            >
-              {playbackSpeed}×
-            </button>
+            <div className="history-slider__buttons">
+              <button className="history-slider__step-btn" {...back5}>«</button>
+              <button className="history-slider__step-btn" {...back1}>‹</button>
+              <button
+                className={`history-slider__step-btn ${isPlaying ? "history-slider__step-btn--active" : ""}`}
+                onClick={togglePlayback}
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+              </button>
+              <button
+                className="history-slider__step-btn history-slider__step-btn--speed"
+                onClick={cycleSpeed}
+                title="Playback speed"
+              >
+                {playbackSpeed}×
+              </button>
+              <button className="history-slider__step-btn" {...fwd1}>›</button>
+              <button className="history-slider__step-btn" {...fwd5}>»</button>
+            </div>
             <input
               ref={sliderRef}
               type="range"
@@ -191,8 +195,6 @@ const HistorySlider = ({
               value={sliderValue}
               onChange={handleChange}
             />
-            <button className="history-slider__step-btn" {...fwd1}>›</button>
-            <button className="history-slider__step-btn" {...fwd5}>»</button>
           </div>
         </div>
       )}
