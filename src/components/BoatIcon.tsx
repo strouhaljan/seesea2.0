@@ -1,7 +1,7 @@
 import React from "react";
 
 import { getDirection, getColorBySpeed } from "../utils/wind";
-import type { ColorMode } from "./LiveMap";
+import type { ColorMode } from "../types/map";
 
 interface BoatIconProps {
   highlight?: boolean;
