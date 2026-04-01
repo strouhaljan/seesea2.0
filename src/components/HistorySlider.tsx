@@ -145,12 +145,26 @@ const HistorySlider = ({
     });
   }, []);
 
+  // Swipe up on panel to collapse
+  const touchStartY = useRef<number | null>(null);
+  const onPanelTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+  const onPanelTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (dy < -30) {
+      handleGoLive();
+    }
+  }, [handleGoLive]);
+
   if (endTime <= startTime) return null;
 
   return (
     <div className={`history-slider ${expanded ? "" : "history-slider--collapsed"} ${!isLive ? "history-slider--active" : ""}`}>
       {expanded && (
-        <div className="history-slider__panel">
+        <div className="history-slider__panel" onTouchStart={onPanelTouchStart} onTouchEnd={onPanelTouchEnd}>
           <div className="history-slider__time">
             {isLive ? (
               <span className="history-slider__live-badge">LIVE</span>
