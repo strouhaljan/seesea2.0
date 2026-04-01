@@ -220,7 +220,7 @@ main {
 
 .live-dot {
   position: absolute;
-  bottom: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   left: 12px;
   width: 8px;
   height: 8px;
@@ -301,7 +301,7 @@ main {
 /* Controls stack (reset button + controls panel) */
 .controls-stack {
   position: absolute;
-  bottom: 20px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
   right: 10px;
   z-index: 10;
   display: flex;
@@ -557,7 +557,7 @@ main {
 
 .follow-indicator {
   position: absolute;
-  bottom: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
   left: 24px;
   z-index: 10;
   display: flex;
