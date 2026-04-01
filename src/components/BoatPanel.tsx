@@ -8,6 +8,7 @@ interface BoatPanelProps {
   crews: Crew[];
   vesselsData: Record<string, VesselDataPoint>;
   activeBoatId: number | null;
+  followedBoatId: number | null;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onFocusBoat: (boatId: number) => void;
@@ -21,6 +22,7 @@ const BoatPanel = ({
   crews,
   vesselsData,
   activeBoatId,
+  followedBoatId,
   collapsed,
   onToggleCollapsed,
   onFocusBoat,
@@ -156,6 +158,9 @@ const BoatPanel = ({
                     />
                     <strong>{crew.name}</strong>
                     <span className="boat-card__number">#{crew.start_number}</span>
+                    {crew.id === followedBoatId && (
+                      <span className="boat-card__follow-badge">following</span>
+                    )}
                   </div>
                   {crew.description && (
                     <div className="boat-card__desc">{crew.description}</div>

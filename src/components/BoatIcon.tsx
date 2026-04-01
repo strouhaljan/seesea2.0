@@ -7,6 +7,7 @@ interface BoatIconProps {
   highlight?: boolean;
   isOurs?: boolean;
   selected?: boolean;
+  followed?: boolean;
   color?: string;
   colorMode?: ColorMode;
   rotation?: number;
@@ -23,6 +24,7 @@ const BoatIcon: React.FC<BoatIconProps> = ({
   highlight = false,
   isOurs = false,
   selected = false,
+  followed = false,
   color = "#392ABF",
   colorMode = "seesea",
   rotation = 0,
@@ -103,6 +105,7 @@ const BoatIcon: React.FC<BoatIconProps> = ({
               borderRadius: "50%",
               border: `2px solid ${selected ? "#22c55e" : isOurs ? "#00bfff" : "red"}`,
               pointerEvents: "none",
+              animation: followed ? "pulse 2s infinite" : undefined,
             }}
           />
         )}
