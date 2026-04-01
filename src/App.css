@@ -61,7 +61,7 @@ body, html {
 .app-container {
   display: flex;
   flex-direction: column;
-  height: calc(100% + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+  height: 100%;
   width: 100%;
 }
 
@@ -149,6 +149,7 @@ header h1 {
 main {
   flex: 1;
   position: relative;
+  margin-bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
 }
 
 .map-container {
@@ -435,7 +436,7 @@ main {
   position: absolute;
   top: 0;
   left: 0;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
   z-index: 10;
   pointer-events: auto;
   transform: translateX(0);
