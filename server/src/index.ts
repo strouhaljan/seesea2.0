@@ -3,7 +3,7 @@ import cors from "cors";
 import { etagMiddleware } from "./middleware/etag.js";
 import eventRouter from "./routes/event.js";
 import liveRouter from "./routes/live.js";
-import windRouter from "./routes/wind.js";
+import windRouter, { warmWindCache } from "./routes/wind.js";
 import tailsRouter from "./routes/tails.js";
 import legRouter from "./routes/leg.js";
 import data2Router, { warmCache, purgeOldChunks } from "./routes/data2.js";
@@ -30,6 +30,7 @@ app.listen(PORT, () => {
   console.log(`SeeSea server listening on port ${PORT}`);
   purgeOldChunks();
   tryWarmCache();
+  warmWindCache();
   // Re-check every 10 minutes — covers the case where no leg was active at
   // startup but one begins later, and keeps new hours warm as time passes.
   setInterval(tryWarmCache, 10 * 60 * 1000);

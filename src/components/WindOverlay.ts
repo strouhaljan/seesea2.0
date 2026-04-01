@@ -1,5 +1,5 @@
 import type { Map as MapboxMap } from "mapbox-gl";
-import { WindGridData, interpolateWind } from "../utils/windGrid";
+import { CompositeGrid, WindGridData, interpolateWind } from "../utils/windGrid";
 import { getColorBySpeed } from "../utils/wind";
 
 const PARTICLE_COUNT = 1000;
@@ -22,14 +22,15 @@ export class WindOverlay {
   private map: MapboxMap;
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private grid: WindGridData;
+  private composite: CompositeGrid;
   private particles: Particle[];
   private animFrameId: number | null = null;
   private visible = false;
+  private _showBarbs = false;
 
-  constructor(map: MapboxMap, grid: WindGridData) {
+  constructor(map: MapboxMap, composite: CompositeGrid) {
     this.map = map;
-    this.grid = grid;
+    this.composite = composite;
 
     const count = getParticleCount();
     this.particles = [];
@@ -71,8 +72,12 @@ export class WindOverlay {
     this.canvas.remove();
   }
 
-  updateGrid(grid: WindGridData): void {
-    this.grid = grid;
+  updateGrid(composite: CompositeGrid): void {
+    this.composite = composite;
+  }
+
+  set showBarbs(value: boolean) {
+    this._showBarbs = value;
   }
 
   destroy(): void {
@@ -94,16 +99,26 @@ export class WindOverlay {
     }
   };
 
-  // On any camera change (pan, zoom), reset all particles so they
-  // redistribute within the new viewport and trails don't stretch
   private onCameraChange = (): void => {
     for (const p of this.particles) {
       this.resetParticle(p);
     }
   };
 
+  /** Compute the overall bounding box across all regions. */
+  private getCompositeBounds(): { minLat: number; maxLat: number; minLng: number; maxLng: number } {
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    for (const grid of this.composite) {
+      if (grid.bounds.minLat < minLat) minLat = grid.bounds.minLat;
+      if (grid.bounds.maxLat > maxLat) maxLat = grid.bounds.maxLat;
+      if (grid.bounds.minLng < minLng) minLng = grid.bounds.minLng;
+      if (grid.bounds.maxLng > maxLng) maxLng = grid.bounds.maxLng;
+    }
+    return { minLat, maxLat, minLng, maxLng };
+  }
+
   private randomInViewport(): { lng: number; lat: number } {
-    const { bounds } = this.grid;
+    const bounds = this.getCompositeBounds();
     let minLat = bounds.minLat;
     let maxLat = bounds.maxLat;
     let minLng = bounds.minLng;
@@ -189,7 +204,7 @@ export class WindOverlay {
       }
 
       const head = particle.trail[0];
-      const wind = interpolateWind(this.grid, head.lat, head.lng);
+      const wind = interpolateWind(this.composite, head.lat, head.lng);
       if (!wind) {
         this.resetParticle(particle);
         continue;
@@ -212,7 +227,6 @@ export class WindOverlay {
 
       if (particle.trail.length < 2) continue;
 
-      // Recycle off-screen particles back into viewport
       const headPx = this.map.project([newPos.lng, newPos.lat]);
       const headX = headPx.x * dpr;
       const headY = headPx.y * dpr;
@@ -256,6 +270,99 @@ export class WindOverlay {
     }
 
     ctx.globalAlpha = 1;
+
+    if (this._showBarbs) {
+      this.drawBarbs(ctx, dpr);
+    }
+
     this.animFrameId = requestAnimationFrame(this.animate);
   };
+
+  private drawBarbs(ctx: CanvasRenderingContext2D, dpr: number): void {
+    const zoom = this.map.getZoom();
+    const mapBounds = this.map.getBounds();
+    if (!mapBounds) return;
+
+    const step = zoom >= 11 ? 1 : zoom >= 9 ? 2 : zoom >= 7 ? 3 : 5;
+    const arrowLen = (zoom >= 11 ? 22 : zoom >= 9 ? 18 : 14) * dpr;
+    const fontSize = Math.round((zoom >= 11 ? 11 : 10) * dpr);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.font = `bold ${fontSize}px sans-serif`;
+
+    for (const grid of this.composite) {
+      this.drawBarbsForGrid(ctx, dpr, grid, mapBounds, step, arrowLen);
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  private drawBarbsForGrid(
+    ctx: CanvasRenderingContext2D,
+    dpr: number,
+    grid: WindGridData,
+    mapBounds: mapboxgl.LngLatBounds,
+    step: number,
+    arrowLen: number,
+  ): void {
+    for (let row = 0; row < grid.latSteps; row += step) {
+      for (let col = 0; col < grid.lngSteps; col += step) {
+        const lat = grid.bounds.minLat + row * grid.dlat;
+        const lng = grid.bounds.minLng + col * grid.dlng;
+
+        if (
+          lat < mapBounds.getSouth() || lat > mapBounds.getNorth() ||
+          lng < mapBounds.getWest() || lng > mapBounds.getEast()
+        ) continue;
+
+        const idx = row * grid.lngSteps + col;
+        const uVal = grid.u[idx];
+        const vVal = grid.v[idx];
+        const speedKnots = grid.speed[idx];
+
+        if (speedKnots < 0.5) continue;
+
+        const px = this.map.project([lng, lat]);
+        const sx = px.x * dpr;
+        const sy = px.y * dpr;
+
+        const angle = Math.atan2(-uVal, vVal);
+        const color = getColorBySpeed(speedKnots);
+
+        const tipX = sx + Math.sin(angle) * arrowLen;
+        const tipY = sy - Math.cos(angle) * arrowLen;
+        const tailX = sx - Math.sin(angle) * arrowLen * 0.3;
+        const tailY = sy + Math.cos(angle) * arrowLen * 0.3;
+
+        ctx.globalAlpha = 0.85;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(tailX, tailY);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+
+        const headLen = 6 * dpr;
+        const headAngle = 0.45;
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(
+          tipX - headLen * Math.sin(angle - headAngle),
+          tipY + headLen * Math.cos(angle - headAngle),
+        );
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(
+          tipX - headLen * Math.sin(angle + headAngle),
+          tipY + headLen * Math.cos(angle + headAngle),
+        );
+        ctx.stroke();
+
+        const labelY = sy + arrowLen * 0.3 + 4 * dpr;
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = color;
+        ctx.fillText(`${Math.round(speedKnots)}`, sx, labelY);
+      }
+    }
+  }
 }

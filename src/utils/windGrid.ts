@@ -2,19 +2,17 @@ import { VesselDataPoint } from "../types/tripData";
 
 export type WindModel = "icon_2i" | "ecmwf";
 
-// Grid covering the Adriatic from Dubrovnik to north of race area
-const GRID_BOUNDS = {
-  minLat: 42.2,
-  maxLat: 45.0,
-  minLng: 14.0,
-  maxLng: 18.2,
-};
-const LAT_STEPS = 15;
-const LNG_STEPS = 20;
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
+export interface WindGridBounds {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
 export interface WindGridData {
-  bounds: typeof GRID_BOUNDS;
+  bounds: WindGridBounds;
   latSteps: number;
   lngSteps: number;
   dlat: number;
@@ -24,77 +22,115 @@ export interface WindGridData {
   speed: Float32Array; // magnitude (knots), row-major
 }
 
+/** A composite grid is an array of regional grids for one forecast hour. */
+export type CompositeGrid = WindGridData[];
+
 interface CacheEntry {
-  grid: WindGridData;
+  hours: CompositeGrid[]; // index 0 = current hour, 1..3 = +1h..+3h forecast
   fetchedAt: number;
 }
 
 const cache = new Map<WindModel, CacheEntry>();
 
-export async function fetchWindGrid(model: WindModel): Promise<WindGridData> {
-  const cached = cache.get(model);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.grid;
+interface RegionResponse {
+  bounds: WindGridBounds;
+  latSteps: number;
+  lngSteps: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  points: any[];
+}
+
+function parseRegionGrids(
+  region: RegionResponse,
+  forecastHours: number,
+): WindGridData[] {
+  const { bounds, latSteps, lngSteps, points } = region;
+  const dlat = (bounds.maxLat - bounds.minLat) / (latSteps - 1);
+  const dlng = (bounds.maxLng - bounds.minLng) / (lngSteps - 1);
+  const total = latSteps * lngSteps;
+
+  const grids: WindGridData[] = [];
+
+  for (let h = 0; h < forecastHours; h++) {
+    const u = new Float32Array(total);
+    const v = new Float32Array(total);
+    const speed = new Float32Array(total);
+
+    for (let i = 0; i < Math.min(total, points.length); i++) {
+      const entry = points[i];
+      if (!entry?.hourly) continue;
+
+      const speedKmh = entry.hourly.wind_speed_10m?.[h] ?? entry.hourly.wind_speed_10m?.[0] ?? 0;
+      const dirDeg = entry.hourly.wind_direction_10m?.[h] ?? entry.hourly.wind_direction_10m?.[0] ?? 0;
+
+      const speedMs = speedKmh / 3.6;
+      const rad = (dirDeg * Math.PI) / 180;
+      u[i] = -speedMs * Math.sin(rad);
+      v[i] = -speedMs * Math.cos(rad);
+      speed[i] = speedKmh * 0.539957;
+    }
+
+    grids.push({ bounds: { ...bounds }, latSteps, lngSteps, dlat, dlng, u, v, speed });
   }
 
-  const dlat = (GRID_BOUNDS.maxLat - GRID_BOUNDS.minLat) / (LAT_STEPS - 1);
-  const dlng = (GRID_BOUNDS.maxLng - GRID_BOUNDS.minLng) / (LNG_STEPS - 1);
+  return grids;
+}
 
-  // Fetch from our server (which caches the Open-Meteo response)
+export async function fetchWindGrid(model: WindModel): Promise<CompositeGrid> {
+  const hours = await fetchWindGrids(model);
+  return hours[0];
+}
+
+export async function fetchWindGrids(model: WindModel): Promise<CompositeGrid[]> {
+  const cached = cache.get(model);
+  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+    return cached.hours;
+  }
+
   const response = await fetch(`/api/wind/${model}`);
   if (!response.ok) throw new Error(`Wind API error: ${response.status}`);
 
-  const data = await response.json();
+  const regions: RegionResponse[] = await response.json();
+  const forecastHours = 4;
 
-  const total = LAT_STEPS * LNG_STEPS;
-  const u = new Float32Array(total);
-  const v = new Float32Array(total);
-  const speed = new Float32Array(total);
+  // Parse each region into per-hour grids, then group by hour
+  const regionGrids = regions.map((r) => parseRegionGrids(r, forecastHours));
+  // regionGrids[regionIdx][hourIdx] → WindGridData
 
-  // Response is an array of objects, one per coordinate pair
-  const results = Array.isArray(data) ? data : [data];
-  for (let i = 0; i < Math.min(total, results.length); i++) {
-    const entry = results[i];
-    if (!entry?.hourly) continue;
-
-    const speedKmh = entry.hourly.wind_speed_10m?.[0] ?? 0;
-    const dirDeg = entry.hourly.wind_direction_10m?.[0] ?? 0;
-
-    // Convert km/h to m/s
-    const speedMs = speedKmh / 3.6;
-    // Meteorological direction (where wind comes FROM) to u/v
-    const rad = (dirDeg * Math.PI) / 180;
-    u[i] = -speedMs * Math.sin(rad);
-    v[i] = -speedMs * Math.cos(rad);
-    // Store speed in knots for color lookup
-    speed[i] = speedKmh * 0.539957;
+  const hours: CompositeGrid[] = [];
+  for (let h = 0; h < forecastHours; h++) {
+    hours.push(regionGrids.map((rg) => rg[h]));
   }
+  // hours[hourIdx][regionIdx] → WindGridData
 
-  const grid: WindGridData = {
-    bounds: { ...GRID_BOUNDS },
-    latSteps: LAT_STEPS,
-    lngSteps: LNG_STEPS,
-    dlat,
-    dlng,
-    u,
-    v,
-    speed,
-  };
+  cache.set(model, { hours, fetchedAt: Date.now() });
+  return hours;
+}
 
-  cache.set(model, { grid, fetchedAt: Date.now() });
-  return grid;
+/** Linearly interpolate between two composite grids. */
+export function lerpGrids(a: CompositeGrid, b: CompositeGrid, t: number): CompositeGrid {
+  const t1 = 1 - t;
+  return a.map((aGrid, i) => {
+    const bGrid = b[i];
+    const total = aGrid.u.length;
+    const u = new Float32Array(total);
+    const v = new Float32Array(total);
+    const speed = new Float32Array(total);
+
+    for (let j = 0; j < total; j++) {
+      u[j] = t1 * aGrid.u[j] + t * bGrid.u[j];
+      v[j] = t1 * aGrid.v[j] + t * bGrid.v[j];
+      speed[j] = t1 * aGrid.speed[j] + t * bGrid.speed[j];
+    }
+
+    return { ...aGrid, u, v, speed };
+  });
 }
 
 export function blendBoatData(
-  baseGrid: WindGridData,
+  composite: CompositeGrid,
   vesselsData: Record<string, VesselDataPoint>,
-): WindGridData {
-  // Clone arrays so we don't mutate the cached grid
-  const u = new Float32Array(baseGrid.u);
-  const v = new Float32Array(baseGrid.v);
-  const speed = new Float32Array(baseGrid.speed);
-
-  // Collect boats with valid wind data
+): CompositeGrid {
   const boats: Array<{
     lat: number;
     lng: number;
@@ -112,8 +148,7 @@ export function blendBoatData(
     )
       continue;
 
-    const twsMs = vessel.tws / 1.944; // knots to m/s
-    // True wind direction = heading + TWA
+    const twsMs = vessel.tws / 1.944;
     const twdDeg = (vessel.hdg + vessel.twa + 360) % 360;
     const rad = (twdDeg * Math.PI) / 180;
 
@@ -126,57 +161,61 @@ export function blendBoatData(
     });
   }
 
-  if (boats.length === 0) {
-    return { ...baseGrid, u, v, speed };
-  }
+  if (boats.length === 0) return composite;
 
-  const influenceRadius = 0.15; // ~15km in degrees
+  const influenceRadius = 0.15;
   const radiusSq = influenceRadius * influenceRadius;
 
-  for (let row = 0; row < baseGrid.latSteps; row++) {
-    for (let col = 0; col < baseGrid.lngSteps; col++) {
-      const idx = row * baseGrid.lngSteps + col;
-      const gridLat = baseGrid.bounds.minLat + row * baseGrid.dlat;
-      const gridLng = baseGrid.bounds.minLng + col * baseGrid.dlng;
+  return composite.map((baseGrid) => {
+    const u = new Float32Array(baseGrid.u);
+    const v = new Float32Array(baseGrid.v);
+    const speed = new Float32Array(baseGrid.speed);
 
-      let totalWeight = 0;
-      let blendU = 0;
-      let blendV = 0;
-      let blendSpeed = 0;
+    for (let row = 0; row < baseGrid.latSteps; row++) {
+      for (let col = 0; col < baseGrid.lngSteps; col++) {
+        const idx = row * baseGrid.lngSteps + col;
+        const gridLat = baseGrid.bounds.minLat + row * baseGrid.dlat;
+        const gridLng = baseGrid.bounds.minLng + col * baseGrid.dlng;
 
-      for (const boat of boats) {
-        const dLat = gridLat - boat.lat;
-        const dLng = gridLng - boat.lng;
-        const distSq = dLat * dLat + dLng * dLng;
+        let totalWeight = 0;
+        let blendU = 0;
+        let blendV = 0;
+        let blendSpeed = 0;
 
-        if (distSq >= radiusSq || distSq < 1e-10) continue;
+        for (const boat of boats) {
+          const dLat = gridLat - boat.lat;
+          const dLng = gridLng - boat.lng;
+          const distSq = dLat * dLat + dLng * dLng;
 
-        const weight = 1 / distSq; // IDW with power=2
-        totalWeight += weight;
-        blendU += weight * boat.u;
-        blendV += weight * boat.v;
-        blendSpeed += weight * boat.speedKnots;
-      }
+          if (distSq >= radiusSq || distSq < 1e-10) continue;
 
-      if (totalWeight > 0) {
-        const boatU = blendU / totalWeight;
-        const boatV = blendV / totalWeight;
-        const boatSpeed = blendSpeed / totalWeight;
+          const weight = 1 / distSq;
+          totalWeight += weight;
+          blendU += weight * boat.u;
+          blendV += weight * boat.v;
+          blendSpeed += weight * boat.speedKnots;
+        }
 
-        const refWeight = 1 / (radiusSq * 0.25);
-        const alpha = Math.min(totalWeight / (totalWeight + refWeight), 0.85);
+        if (totalWeight > 0) {
+          const boatU = blendU / totalWeight;
+          const boatV = blendV / totalWeight;
+          const boatSpeed = blendSpeed / totalWeight;
 
-        u[idx] = (1 - alpha) * u[idx] + alpha * boatU;
-        v[idx] = (1 - alpha) * v[idx] + alpha * boatV;
-        speed[idx] = (1 - alpha) * speed[idx] + alpha * boatSpeed;
+          const refWeight = 1 / (radiusSq * 0.25);
+          const alpha = Math.min(totalWeight / (totalWeight + refWeight), 0.85);
+
+          u[idx] = (1 - alpha) * u[idx] + alpha * boatU;
+          v[idx] = (1 - alpha) * v[idx] + alpha * boatV;
+          speed[idx] = (1 - alpha) * speed[idx] + alpha * boatSpeed;
+        }
       }
     }
-  }
 
-  return { ...baseGrid, u, v, speed };
+    return { ...baseGrid, u, v, speed };
+  });
 }
 
-export function interpolateWind(
+function interpolateWindSingle(
   grid: WindGridData,
   lat: number,
   lng: number,
@@ -214,4 +253,17 @@ export function interpolateWind(
       grid.speed[i01] * w01 +
       grid.speed[i11] * w11,
   };
+}
+
+/** Interpolate wind at a point, trying each region in the composite grid. */
+export function interpolateWind(
+  composite: CompositeGrid,
+  lat: number,
+  lng: number,
+): { u: number; v: number; speed: number } | null {
+  for (const grid of composite) {
+    const result = interpolateWindSingle(grid, lat, lng);
+    if (result) return result;
+  }
+  return null;
 }
