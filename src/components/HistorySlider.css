@@ -162,6 +162,7 @@
 @media (max-width: 600px) {
   .history-slider__controls {
     flex-direction: column;
+    gap: 8px;
   }
 
   .history-slider__buttons {
