@@ -205,7 +205,6 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           followedBoatId={followedBoatId}
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}
-          onStopFollow={handleStopFollow}
           isHistoryMode={isHistoryMode}
           controlsOpen={controlsOpen}
           onToggleControls={onToggleControls}

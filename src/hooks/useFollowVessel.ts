@@ -7,7 +7,6 @@ export function useFollowVessel(
   mapLoaded: boolean,
   followedBoatId: number | null,
   vesselsSnapshotRef: MutableRefObject<{ data: Record<string, VesselDataPoint>; receivedAt: number }>,
-  onStopFollow: () => void,
 ) {
   const followedBoatIdRef = useRef<number | null>(null);
 
@@ -26,19 +25,6 @@ export function useFollowVessel(
       }
     }
   }, [followedBoatId]);
-
-  // Stop following when user drags the map
-  useEffect(() => {
-    if (!map.current) return;
-    const m = map.current;
-    const handleDragStart = () => {
-      if (followedBoatIdRef.current != null) {
-        onStopFollow();
-      }
-    };
-    m.on("dragstart", handleDragStart);
-    return () => { m.off("dragstart", handleDragStart); };
-  }, [onStopFollow]);
 
   // Re-center on followed vessel during animation
   useEffect(() => {
