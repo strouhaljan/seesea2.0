@@ -13,6 +13,7 @@ import { useTailLayer } from "../hooks/useTailLayer";
 import { useLegLayer } from "../hooks/useLegLayer";
 import { useWindOverlay } from "../hooks/useWindOverlay";
 import { useFollowVessel } from "../hooks/useFollowVessel";
+import { useDistanceMeasure } from "../hooks/useDistanceMeasure";
 import { MapControls } from "./MapControls";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -125,6 +126,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   });
 
   useFollowVessel(map, mapLoaded, followedBoatId, vesselsSnapshotRef, onStopFollow);
+  useDistanceMeasure(map, mapLoaded);
 
   return (
     <div className="map-wrapper">
