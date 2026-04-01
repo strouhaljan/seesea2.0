@@ -227,5 +227,43 @@ function purgeOldChunks(maxAgeMs = 7 * 24 * 60 * 60 * 1000) {
   }
 }
 
-export { warmCache, purgeOldChunks };
+/**
+ * Look up wind speed readings from the cache for a given time range.
+ * Returns a map of vesselId → time-sorted array of {time, tws} pairs.
+ */
+async function getWindSpeeds(
+  eventId: string,
+  fromTime: number,
+  toTime: number,
+): Promise<Record<string, { time: number; tws: number }[]>> {
+  const firstHour = floorHour(fromTime);
+  const lastHour = floorHour(toTime);
+  const hours: number[] = [];
+  for (let h = firstHour; h <= lastHour; h += 3600) {
+    hours.push(h);
+  }
+
+  const chunks = await Promise.all(hours.map((h) => fetchChunk(eventId, h)));
+
+  const result: Record<string, { time: number; tws: number }[]> = {};
+  for (const chunk of chunks) {
+    if (!chunk) continue;
+    for (const [vesselId, points] of Object.entries(chunk.objects)) {
+      for (const p of points) {
+        if (p.time >= fromTime && p.time <= toTime && p.tws != null) {
+          if (!result[vesselId]) result[vesselId] = [];
+          result[vesselId].push({ time: p.time, tws: p.tws });
+        }
+      }
+    }
+  }
+
+  for (const points of Object.values(result)) {
+    points.sort((a, b) => a.time - b.time);
+  }
+
+  return result;
+}
+
+export { warmCache, purgeOldChunks, getWindSpeeds };
 export default router;
