@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Play, Pause } from "lucide-react";
 import { formatDate } from "../utils/dateUtils";
 import "./HistorySlider.css";
 
@@ -51,14 +51,26 @@ const HistorySlider = ({
   onTimeChange,
 }: HistorySliderProps) => {
   const [expanded, setExpanded] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const playbackSpeedRef = useRef(playbackSpeed);
+  playbackSpeedRef.current = playbackSpeed;
+  const playIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const isLive = currentTime === null;
   const sliderRef = useRef<HTMLInputElement>(null);
 
   const max = endTime + 1;
   const sliderValue = isLive ? max : currentTime;
 
+  const stopPlayback = useCallback(() => {
+    clearInterval(playIntervalRef.current);
+    playIntervalRef.current = undefined;
+    setIsPlaying(false);
+  }, []);
+
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      stopPlayback();
       const val = parseInt(e.target.value, 10);
       if (val > endTime) {
         onTimeChange(null);
@@ -66,13 +78,14 @@ const HistorySlider = ({
         onTimeChange(val);
       }
     },
-    [endTime, onTimeChange],
+    [endTime, onTimeChange, stopPlayback],
   );
 
   const handleGoLive = useCallback(() => {
+    stopPlayback();
     onTimeChange(null);
     setExpanded(false);
-  }, [onTimeChange]);
+  }, [onTimeChange, stopPlayback]);
 
   const step = useCallback(
     (seconds: number) => {
@@ -87,17 +100,71 @@ const HistorySlider = ({
     [startTime, endTime, onTimeChange],
   );
 
-  const back5 = useRepeatAction(useCallback(() => step(-300), [step]));
-  const back1 = useRepeatAction(useCallback(() => step(-60), [step]));
-  const fwd1 = useRepeatAction(useCallback(() => step(60), [step]));
-  const fwd5 = useRepeatAction(useCallback(() => step(300), [step]));
+  const back5 = useRepeatAction(useCallback(() => { stopPlayback(); step(-300); }, [step, stopPlayback]));
+  const back1 = useRepeatAction(useCallback(() => { stopPlayback(); step(-60); }, [step, stopPlayback]));
+  const fwd1 = useRepeatAction(useCallback(() => { stopPlayback(); step(60); }, [step, stopPlayback]));
+  const fwd5 = useRepeatAction(useCallback(() => { stopPlayback(); step(300); }, [step, stopPlayback]));
+
+  // Playback interval — reads speed from ref so changing speed doesn't restart the interval
+  useEffect(() => {
+    if (!isPlaying) return;
+    playIntervalRef.current = setInterval(() => {
+      onTimeChange((prev) => {
+        const base = prev ?? startTime;
+        const next = base + playbackSpeedRef.current;
+        if (next > endTime) {
+          setTimeout(stopPlayback, 0);
+          return null;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(playIntervalRef.current);
+  }, [isPlaying, startTime, endTime, onTimeChange, stopPlayback]);
+
+  // Clean up on unmount
+  useEffect(() => () => clearInterval(playIntervalRef.current), []);
+
+  const togglePlayback = useCallback(() => {
+    if (isPlaying) {
+      stopPlayback();
+    } else {
+      // If live, start from beginning
+      if (isLive) {
+        onTimeChange(startTime);
+      }
+      setIsPlaying(true);
+    }
+  }, [isPlaying, isLive, startTime, onTimeChange, stopPlayback]);
+
+  const speeds = [1, 5, 20] as const;
+  const cycleSpeed = useCallback(() => {
+    setPlaybackSpeed((prev) => {
+      const idx = speeds.indexOf(prev as typeof speeds[number]);
+      return speeds[(idx + 1) % speeds.length];
+    });
+  }, []);
+
+  // Swipe up on panel to collapse
+  const touchStartY = useRef<number | null>(null);
+  const onPanelTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+  const onPanelTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartY.current = null;
+    if (dy < -30) {
+      handleGoLive();
+    }
+  }, [handleGoLive]);
 
   if (endTime <= startTime) return null;
 
   return (
     <div className={`history-slider ${expanded ? "" : "history-slider--collapsed"} ${!isLive ? "history-slider--active" : ""}`}>
       {expanded && (
-        <div className="history-slider__panel">
+        <div className="history-slider__panel" onTouchStart={onPanelTouchStart} onTouchEnd={onPanelTouchEnd}>
           <div className="history-slider__time">
             {isLive ? (
               <span className="history-slider__live-badge">LIVE</span>
@@ -113,8 +180,26 @@ const HistorySlider = ({
             )}
           </div>
           <div className="history-slider__controls">
-            <button className="history-slider__step-btn" {...back5}>«</button>
-            <button className="history-slider__step-btn" {...back1}>‹</button>
+            <div className="history-slider__buttons">
+              <button className="history-slider__step-btn" {...back5}>«</button>
+              <button className="history-slider__step-btn" {...back1}>‹</button>
+              <button
+                className={`history-slider__step-btn ${isPlaying ? "history-slider__step-btn--active" : ""}`}
+                onClick={togglePlayback}
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+              </button>
+              <button
+                className="history-slider__step-btn history-slider__step-btn--speed"
+                onClick={cycleSpeed}
+                title="Playback speed"
+              >
+                {playbackSpeed}×
+              </button>
+              <button className="history-slider__step-btn" {...fwd1}>›</button>
+              <button className="history-slider__step-btn" {...fwd5}>»</button>
+            </div>
             <input
               ref={sliderRef}
               type="range"
@@ -124,8 +209,6 @@ const HistorySlider = ({
               value={sliderValue}
               onChange={handleChange}
             />
-            <button className="history-slider__step-btn" {...fwd1}>›</button>
-            <button className="history-slider__step-btn" {...fwd5}>»</button>
           </div>
         </div>
       )}
