@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** Raw tail point from the API: [timestamp, longitude, latitude] */
-export type TailPoint = [number, number, number];
+/** Raw tail point: [timestamp, longitude, latitude, windSpeed?] */
+export type TailPoint = [number, number, number] | [number, number, number, number];
 
 /** Tails data keyed by vessel ID */
 export type TailsData = Record<string, TailPoint[]>;
