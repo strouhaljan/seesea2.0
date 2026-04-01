@@ -42,6 +42,10 @@
   background: var(--panel-hover);
 }
 
+.history-slider--collapsed .history-slider__toggle:hover {
+  background: transparent;
+}
+
 .history-slider__toggle--active {
   border: 1px solid rgba(255, 159, 67, 0.6);
   border-top: none;
