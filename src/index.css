@@ -38,6 +38,5 @@ h1 {
 
 .mapboxgl-ctrl-logo {
   margin: 10px !important;
-  margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
 }
 

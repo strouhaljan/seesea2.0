@@ -46,10 +46,11 @@
 }
 
 body, html {
-  height: 100%;
+  height: 100dvh;
   width: 100%;
   touch-action: pan-x pan-y;
   overscroll-behavior: none;
+  overflow: hidden;
   background: var(--panel-bg-solid, #1a1a2e);
 }
 
@@ -61,15 +62,8 @@ body, html {
 .app-container {
   display: flex;
   flex-direction: column;
-  height: calc(100% + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px));
+  height: 100%;
   width: 100%;
-}
-
-@media all and (display-mode: standalone) {
-  .app-container {
-    position: fixed;
-    inset: 0;
-  }
 }
 
 header {
@@ -156,12 +150,12 @@ header h1 {
 main {
   flex: 1;
   position: relative;
-  margin-bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
 }
 
 .map-container {
-  height: 100%;
-  width: 100%;
+  position: absolute;
+  inset: 0;
+  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
 }
 
 .loading, .error {
@@ -229,7 +223,7 @@ main {
 
 .live-dot {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: 12px;
   left: 12px;
   width: 8px;
   height: 8px;
@@ -310,7 +304,7 @@ main {
 /* Controls stack (reset button + controls panel) */
 .controls-stack {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  bottom: 20px;
   right: 10px;
   z-index: 10;
   display: flex;
@@ -443,7 +437,7 @@ main {
   position: absolute;
   top: 0;
   left: 0;
-  bottom: env(safe-area-inset-bottom, 0px);
+  bottom: 0;
   z-index: 10;
   pointer-events: auto;
   transform: translateX(0);
@@ -566,7 +560,7 @@ main {
 
 .follow-indicator {
   position: absolute;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: 12px;
   left: 24px;
   z-index: 10;
   display: flex;
