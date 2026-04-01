@@ -61,6 +61,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   );
   const { historyData, historyTails } = useHistoryData(eventId, selectedTime, trailMinutes);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
+  const [followedBoatId, setFollowedBoatId] = useState<number | null>(null);
 
   // Sync trailMinutes from localStorage (LiveMap dispatches trailMinutesChanged)
   useEffect(() => {
@@ -74,14 +75,21 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
 
   const handleBoatClick = useCallback((boatId: number) => {
     setActiveBoatId(boatId);
+    setFollowedBoatId(boatId);
     if (panelCollapsed) onTogglePanel();
   }, [panelCollapsed, onTogglePanel]);
 
   const handleClearActive = useCallback(() => {
     setActiveBoatId(null);
+    setFollowedBoatId(null);
+  }, []);
+
+  const handleStopFollow = useCallback(() => {
+    setFollowedBoatId(null);
   }, []);
 
   const handleFocusBoat = useCallback((boatId: number) => {
+    setFollowedBoatId(boatId);
     const data = displayData[String(boatId)];
     if (data?.coords) {
       mapRef.current?.flyTo(data.coords);
@@ -194,8 +202,10 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           trackLengthMax={trackLengthMax}
           legMarkers={legMarkers}
           activeBoatId={activeBoatId}
+          followedBoatId={followedBoatId}
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}
+          onStopFollow={handleStopFollow}
           isHistoryMode={isHistoryMode}
           controlsOpen={controlsOpen}
           onToggleControls={onToggleControls}
@@ -204,6 +214,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           crews={crews}
           vesselsData={displayData}
           activeBoatId={activeBoatId}
+          followedBoatId={followedBoatId}
           collapsed={panelCollapsed}
           onToggleCollapsed={onTogglePanel}
           onFocusBoat={handleFocusBoat}
@@ -212,6 +223,16 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
       </div>
 
       {lastUpdated && !error && !isHistoryMode && <div className="live-dot" />}
+
+      {followedBoatId != null && (() => {
+        const crew = crews.find((c) => c.id === followedBoatId);
+        return (
+          <div className="follow-indicator" onClick={handleStopFollow}>
+            <span className="follow-indicator__dot" />
+            Following {crew?.name ?? `#${followedBoatId}`} — tap to stop
+          </div>
+        );
+      })()}
 
       <HistorySlider
         startTime={legStartTime}

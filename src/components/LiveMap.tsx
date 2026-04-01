@@ -62,14 +62,16 @@ interface LiveMapProps {
   trackLengthMax: number;
   legMarkers: LegMarker[];
   activeBoatId: number | null;
+  followedBoatId: number | null;
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
+  onStopFollow: () => void;
   isHistoryMode?: boolean;
   controlsOpen: boolean;
   onToggleControls: () => void;
 }
 
-const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, legMarkers, activeBoatId, onBoatClick, onClearActive, isHistoryMode = false, controlsOpen, onToggleControls }, ref) => {
+const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, trackLengthMax, legMarkers, activeBoatId, followedBoatId, onBoatClick, onClearActive, onStopFollow, isHistoryMode = false, controlsOpen, onToggleControls }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -102,6 +104,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
   const hasCenteredRef = useRef(false);
   const vesselsSnapshotRef = useRef<{ data: Record<string, VesselDataPoint>; receivedAt: number }>({ data: {}, receivedAt: 0 });
   const windOverlayRef = useRef<WindOverlay | null>(null);
+  const followedBoatIdRef = useRef<number | null>(null);
   const { crews, highlightedCrews } = useEventConfig();
 
   useEffect(() => {
@@ -235,6 +238,36 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
     };
   }, [mapLoaded, showWind, windModel, blendBoats, vesselsData, isHistoryMode]);
 
+  // Keep followedBoatId ref in sync for the animation loop
+  // Fly to the vessel when follow starts
+  useEffect(() => {
+    followedBoatIdRef.current = followedBoatId;
+    if (followedBoatId != null && map.current) {
+      const vessel = vesselsSnapshotRef.current.data[String(followedBoatId)];
+      if (vessel?.coords) {
+        const currentZoom = map.current.getZoom();
+        map.current.flyTo({
+          center: vessel.coords,
+          zoom: Math.max(currentZoom, 14),
+          speed: 2,
+        });
+      }
+    }
+  }, [followedBoatId]);
+
+  // Stop following when user drags the map
+  useEffect(() => {
+    if (!map.current) return;
+    const m = map.current;
+    const handleDragStart = () => {
+      if (followedBoatIdRef.current != null) {
+        onStopFollow();
+      }
+    };
+    m.on("dragstart", handleDragStart);
+    return () => { m.off("dragstart", handleDragStart); };
+  }, [onStopFollow]);
+
   // Snapshot vessel data with receive timestamp for interpolation
   useEffect(() => {
     if (Object.keys(vesselsData).length > 0) {
@@ -243,20 +276,36 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
   }, [vesselsData]);
 
   // Animate marker positions between data updates using SOG/COG projection
+  // Also re-center map on followed vessel (throttled to once per second)
   useEffect(() => {
     if (!mapLoaded) return;
     let raf = 0;
+    let lastFollowCenter = 0;
     const tick = () => {
       const { data, receivedAt } = vesselsSnapshotRef.current;
       if (receivedAt > 0) {
-        const elapsedMin = (performance.now() - receivedAt) / 60_000;
+        const now = performance.now();
+        const elapsedMin = (now - receivedAt) / 60_000;
+        const followId = followedBoatIdRef.current;
         for (const [id, vessel] of Object.entries(data)) {
           const marker = markersRef.current[id];
           if (!marker || !vessel.coords) continue;
           const cog = vessel.cog || vessel.hdg || 0;
           const sog = vessel.sog || 0;
+          let pos = vessel.coords;
           if (sog > 0 && cog) {
-            marker.setLngLat(futurePosition(vessel.coords, sog, cog, elapsedMin));
+            pos = futurePosition(vessel.coords, sog, cog, elapsedMin);
+            marker.setLngLat(pos);
+          }
+          // Re-center map on followed vessel (at most once per second)
+          if (followId != null && parseInt(id) === followId && map.current && now - lastFollowCenter > 1000) {
+            const center = map.current.getCenter();
+            const dx = Math.abs(center.lng - pos[0]);
+            const dy = Math.abs(center.lat - pos[1]);
+            if (dx > 0.00005 || dy > 0.00005) {
+              map.current.easeTo({ center: pos, duration: 1000 });
+              lastFollowCenter = now;
+            }
           }
         }
       }
@@ -315,6 +364,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             highlight={isHighlighted}
             isOurs={crew?.name === OUR_BOAT}
             selected={activeBoatId === parseInt(vesselId)}
+            followed={followedBoatId === parseInt(vesselId)}
             color={crew?.track_color}
             colorMode={colorMode}
             rotation={rotation}
@@ -343,6 +393,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
             highlight={isHighlighted}
             isOurs={crew?.name === OUR_BOAT}
             selected={activeBoatId === parseInt(vesselId)}
+            followed={followedBoatId === parseInt(vesselId)}
             color={crew?.track_color}
             colorMode={colorMode}
             rotation={rotation}
@@ -635,7 +686,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({ vesselsData, tails, t
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, futureMinutes, tails, trailMinutes, legMarkers, isHistoryMode]);
+  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, followedBoatId, futureMinutes, tails, trailMinutes, legMarkers, isHistoryMode]);
 
 
   return (
