@@ -33,7 +33,6 @@ interface LiveMapProps {
   followedBoatId: number | null;
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
-  onStopFollow: () => void;
   isHistoryMode?: boolean;
   controlsOpen: boolean;
   onToggleControls: () => void;
@@ -42,7 +41,7 @@ interface LiveMapProps {
 const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   vesselsData, tails, trackLengthMax, legMarkers,
   activeBoatId, followedBoatId,
-  onBoatClick, onClearActive, onStopFollow,
+  onBoatClick, onClearActive,
   isHistoryMode = false, controlsOpen, onToggleControls,
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -126,7 +125,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     futureMinutes: controls.futureMinutes,
   });
 
-  useFollowVessel(map, mapLoaded, followedBoatId, vesselsSnapshotRef, onStopFollow);
+  useFollowVessel(map, mapLoaded, followedBoatId, vesselsSnapshotRef);
   useDistanceMeasure(map, mapLoaded);
 
   return (
