@@ -46,17 +46,11 @@
 }
 
 body, html {
-  height: 100dvh;
+  margin: 0;
   width: 100%;
   touch-action: pan-x pan-y;
   overscroll-behavior: none;
-  overflow: hidden;
   background: var(--panel-bg-solid, #1a1a2e);
-}
-
-#root {
-  height: 100%;
-  width: 100%;
 }
 
 .app-container {
