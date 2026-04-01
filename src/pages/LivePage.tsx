@@ -203,6 +203,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
         <BoatPanel
           crews={crews}
           vesselsData={displayData}
+          legMarkers={legMarkers}
           activeBoatId={activeBoatId}
           collapsed={panelCollapsed}
           onToggleCollapsed={onTogglePanel}

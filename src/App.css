@@ -464,7 +464,14 @@ main {
 
 .boat-panel__search-wrap {
   flex-shrink: 0;
+  display: flex;
+  align-self: stretch;
+}
+
+.boat-panel__search-input-wrap {
   position: relative;
+  flex: 1;
+  min-width: 0;
 }
 
 .boat-panel__search {
@@ -607,4 +614,42 @@ main {
 .boat-card__stats--empty {
   color: var(--panel-text-faint);
   font-style: italic;
+}
+
+.boat-panel__sort-toggle {
+  flex-shrink: 0;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel-input-bg);
+  border: none;
+  border-bottom: 1px solid var(--panel-input-border);
+  border-left: 1px solid var(--panel-border);
+  color: var(--panel-text-dim);
+  cursor: pointer;
+}
+
+.boat-panel__sort-toggle:hover {
+  background: var(--panel-input-focus-bg);
+  color: var(--panel-text);
+}
+
+.boat-card__position {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--panel-text-faint);
+  color: var(--panel-bg);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.boat-card__dtf {
+  color: var(--panel-text-dim);
 }
