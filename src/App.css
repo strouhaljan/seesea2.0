@@ -46,10 +46,11 @@
 }
 
 body, html {
-  height: 100dvh;
+  height: 100%;
   width: 100%;
   touch-action: pan-x pan-y;
   overscroll-behavior: none;
+  background: var(--panel-bg-solid, #1a1a2e);
 }
 
 #root {
