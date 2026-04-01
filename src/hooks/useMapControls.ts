@@ -40,6 +40,9 @@ export function useMapControls() {
   useEffect(() => {
     saveTheme(mapTheme);
     document.documentElement.setAttribute("data-theme", mapTheme);
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", mapTheme === "dark" ? "#0f172a" : "#ffffff");
   }, [mapTheme]);
 
   return {
