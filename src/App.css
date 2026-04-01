@@ -61,8 +61,15 @@ body, html {
 .app-container {
   display: flex;
   flex-direction: column;
-  position: fixed;
-  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+
+@media all and (display-mode: standalone) {
+  .app-container {
+    position: fixed;
+    inset: 0;
+  }
 }
 
 header {
