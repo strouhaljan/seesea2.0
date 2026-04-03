@@ -24,11 +24,15 @@ export interface LiveMapHandle {
   flyTo: (coords: [number, number]) => void;
 }
 
+import { EventLeg } from "../hooks/useEventConfig";
+
 interface LiveMapProps {
   vesselsData: Record<string, VesselDataPoint>;
   tails: TailsData;
   trackLengthMax: number;
   legMarkers: LegMarker[];
+  legs: EventLeg[];
+  activeLegId: number | null;
   activeBoatId: number | null;
   followedBoatId: number | null;
   onBoatClick: (boatId: number) => void;
@@ -40,6 +44,7 @@ interface LiveMapProps {
 
 const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   vesselsData, tails, trackLengthMax, legMarkers,
+  legs, activeLegId,
   activeBoatId, followedBoatId,
   onBoatClick, onClearActive,
   isHistoryMode = false, controlsOpen, onToggleControls,
@@ -133,6 +138,10 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
       <div ref={mapContainer} className="map-container" />
       <MapControls
         controlsOpen={controlsOpen}
+        legs={legs}
+        selectedLegId={controls.selectedLegId}
+        setSelectedLegId={controls.setSelectedLegId}
+        activeLegId={activeLegId}
         colorMode={controls.colorMode}
         setColorMode={controls.setColorMode}
         showOnlyHighlighted={controls.showOnlyHighlighted}

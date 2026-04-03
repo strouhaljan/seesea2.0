@@ -402,6 +402,22 @@ main {
   margin: 2px 0;
 }
 
+.controls-panel__select {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--panel-text);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+}
+
+.controls-panel__select:focus {
+  border-color: #4a9eff;
+}
+
 .controls-panel__radio {
   display: flex;
   align-items: center;

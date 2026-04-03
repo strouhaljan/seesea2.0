@@ -1,12 +1,17 @@
 import { ColorMode } from "../types/map";
 import { MapTheme } from "../utils/mapConfig";
 import { WindModel } from "../utils/windGrid";
+import { EventLeg } from "../hooks/useEventConfig";
 
 const FUTURE_STEPS = [30, 60, 90, 120, 150, 180];
 const TRAIL_STEPS = [15, 30, 60, 120, 180];
 
 interface MapControlsProps {
   controlsOpen: boolean;
+  legs: EventLeg[];
+  selectedLegId: number | null;
+  setSelectedLegId: (id: number | null) => void;
+  activeLegId: number | null;
   colorMode: ColorMode;
   setColorMode: (mode: ColorMode) => void;
   showOnlyHighlighted: boolean;
@@ -29,6 +34,7 @@ interface MapControlsProps {
 
 export const MapControls = ({
   controlsOpen,
+  legs, selectedLegId, setSelectedLegId, activeLegId,
   colorMode, setColorMode,
   showOnlyHighlighted, setShowOnlyHighlighted,
   futureMinutes, setFutureMinutes,
@@ -42,6 +48,26 @@ export const MapControls = ({
 }: MapControlsProps) => (
   <div className="controls-stack">
     <div className={`controls-panel ${controlsOpen ? "" : "controls-panel--hidden"}`}>
+      {legs.length > 1 && (
+        <div className="controls-panel__row controls-panel__row--column">
+          <span className="controls-panel__label">Leg</span>
+          <select
+            className="controls-panel__select"
+            value={selectedLegId ?? "auto"}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedLegId(val === "auto" ? null : parseInt(val, 10));
+            }}
+          >
+            <option value="auto">
+              Auto{activeLegId ? ` (${legs.find((l) => l.id === activeLegId)?.name ?? ""})` : ""}
+            </option>
+            {legs.filter((l) => l.active === 1).map((leg) => (
+              <option key={leg.id} value={leg.id}>{leg.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="controls-panel__row">
         <span className="controls-panel__label">SeeSea</span>
         <label className="toggle-switch">

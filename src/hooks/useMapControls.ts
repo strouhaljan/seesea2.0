@@ -4,6 +4,12 @@ import { getSavedTheme, saveTheme, MapTheme } from "../utils/mapConfig";
 import { WindModel } from "../utils/windGrid";
 
 export function useMapControls() {
+  const [selectedLegId, setSelectedLegId] = useState<number | null>(
+    () => {
+      const saved = localStorage.getItem("selectedLegId");
+      return saved ? parseInt(saved, 10) : null;
+    }
+  );
   const [colorMode, setColorMode] = useState<ColorMode>(
     () => (localStorage.getItem("colorMode") as ColorMode) || "seesea"
   );
@@ -27,6 +33,14 @@ export function useMapControls() {
   );
   const [mapTheme, setMapTheme] = useState<MapTheme>(getSavedTheme);
 
+  useEffect(() => {
+    if (selectedLegId !== null) {
+      localStorage.setItem("selectedLegId", String(selectedLegId));
+    } else {
+      localStorage.removeItem("selectedLegId");
+    }
+    window.dispatchEvent(new Event("selectedLegChanged"));
+  }, [selectedLegId]);
   useEffect(() => { localStorage.setItem("colorMode", colorMode); }, [colorMode]);
   useEffect(() => { localStorage.setItem("showOnlyHighlighted", String(showOnlyHighlighted)); }, [showOnlyHighlighted]);
   useEffect(() => { localStorage.setItem("showWind", String(showWind)); }, [showWind]);
@@ -43,6 +57,7 @@ export function useMapControls() {
   }, [mapTheme]);
 
   return {
+    selectedLegId, setSelectedLegId,
     colorMode, setColorMode,
     showOnlyHighlighted, setShowOnlyHighlighted,
     showWind, setShowWind,

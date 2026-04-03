@@ -38,8 +38,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   const { eventId, crews, legs } = useEventConfig();
   const mapRef = useRef<LiveMapHandle>(null);
 
-  // Pick the current active leg for tails (last active leg by start date)
-  const activeLeg = useMemo(() => {
+  // Auto-detected active leg (by current time)
+  const autoLeg = useMemo(() => {
     const active = legs.filter((l) => l.active === 1);
     if (active.length === 0) return null;
     const now = Date.now();
@@ -49,8 +49,35 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
     return current ?? active[0];
   }, [legs]);
 
+  // Allow manual leg override from settings
+  const selectedLegId = useMemo(() => {
+    const saved = localStorage.getItem("selectedLegId");
+    return saved ? parseInt(saved, 10) : null;
+  }, []);
+  const [manualLegId, setManualLegId] = useState<number | null>(selectedLegId);
+
+  // Sync with localStorage changes from MapControls
+  useEffect(() => {
+    const handler = () => {
+      const saved = localStorage.getItem("selectedLegId");
+      setManualLegId(saved ? parseInt(saved, 10) : null);
+    };
+    window.addEventListener("selectedLegChanged", handler);
+    return () => window.removeEventListener("selectedLegChanged", handler);
+  }, []);
+
+  const activeLeg = useMemo(() => {
+    if (manualLegId !== null) {
+      const manual = legs.find((l) => l.id === manualLegId);
+      if (manual) return manual;
+    }
+    return autoLeg;
+  }, [manualLegId, legs, autoLeg]);
+
   const activeLegId = activeLeg?.id ?? null;
+  const autoLegId = autoLeg?.id ?? null;
   const legStartTime = activeLeg ? Math.floor(new Date(activeLeg.start).getTime() / 1000) : 0;
+  const legEndTime = activeLeg ? Math.floor(new Date(activeLeg.end).getTime() / 1000) : 0;
   const nowTime = Math.floor(Date.now() / 1000);
 
   const { tails, trackLengthMax } = useTails(eventId, activeLegId);
@@ -201,6 +228,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           tails={isHistoryMode ? historyTails : tails}
           trackLengthMax={trackLengthMax}
           legMarkers={legMarkers}
+          legs={legs}
+          activeLegId={autoLegId}
           activeBoatId={activeBoatId}
           followedBoatId={followedBoatId}
           onBoatClick={handleBoatClick}
@@ -236,7 +265,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
 
       <HistorySlider
         startTime={legStartTime}
-        endTime={nowTime}
+        endTime={legEndTime < nowTime ? legEndTime : nowTime}
         currentTime={selectedTime}
         onTimeChange={setSelectedTime}
       />
