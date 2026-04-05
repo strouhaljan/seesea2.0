@@ -33,6 +33,11 @@ class ChunkCache {
     return `${eventId}:${hourStart}`;
   }
 
+  /** Synchronous cache lookup — returns the chunk or undefined if not cached */
+  tryGetChunk(eventId: number, hourStart: number): ChunkData | undefined {
+    return this.chunks.get(this.key(eventId, hourStart));
+  }
+
   async getChunk(
     eventId: number,
     hourStart: number,
@@ -217,12 +222,35 @@ export function useHistoryData(
       hours.push(h);
     }
 
+    // Fast path: if all chunks are already cached, slice synchronously
+    const syncChunks: (ChunkData | null)[] = [];
+    let allCached = true;
+    for (const h of hours) {
+      const c = chunkCache.tryGetChunk(eventId, h);
+      if (c) {
+        syncChunks.push(c);
+      } else {
+        allCached = false;
+        break;
+      }
+    }
+
+    if (allCached) {
+      const { positions, tails, timelines } = sliceData(selectedTime, trailMinutes, syncChunks);
+      setHistoryData(positions);
+      setHistoryTails(tails);
+      setHistoryTimelines(timelines);
+      setLoading(false);
+      chunkCache.prefetch(eventId, lastHour + 3600);
+      return;
+    }
+
+    // Slow path: fetch missing chunks, then slice
     setLoading(true);
 
     Promise.all(
       hours.map((h) => chunkCache.getChunk(eventId, h, controller.signal)),
     ).then((chunks) => {
-      // Discard stale responses
       if (requestId !== latestRequestRef.current) return;
 
       const { positions, tails, timelines } = sliceData(selectedTime, trailMinutes, chunks);
@@ -231,9 +259,7 @@ export function useHistoryData(
       setHistoryTimelines(timelines);
       setLoading(false);
 
-      // Prefetch the next hour chunk for smooth forward playback
-      const nextHour = lastHour + 3600;
-      chunkCache.prefetch(eventId, nextHour);
+      chunkCache.prefetch(eventId, lastHour + 3600);
     }).catch((err) => {
       if (err instanceof DOMException && err.name === "AbortError") return;
       console.error("Failed to load history chunks:", err);
