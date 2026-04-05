@@ -176,6 +176,26 @@ async function warmCache(eventId: string, fromTime: number) {
 
 const router = Router();
 
+router.get("/:eventId/chunk", async (req, res) => {
+  const { eventId } = req.params;
+  const { hour } = req.query;
+
+  if (!hour) {
+    res.status(400).json({ error: "hour query param required" });
+    return;
+  }
+
+  const hourStart = Number(hour);
+  const chunk = await fetchChunk(eventId, hourStart);
+
+  if (!chunk) {
+    res.json({ objects: {} });
+    return;
+  }
+
+  res.json({ objects: chunk.objects });
+});
+
 router.get("/:eventId", async (req, res) => {
   const { eventId } = req.params;
   const { time, trail } = req.query;
