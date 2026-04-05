@@ -55,7 +55,6 @@ const HistorySlider = ({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const playbackSpeedRef = useRef(playbackSpeed);
   playbackSpeedRef.current = playbackSpeed;
-  const playIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const isLive = currentTime === null;
   const sliderRef = useRef<HTMLInputElement>(null);
 
@@ -63,8 +62,6 @@ const HistorySlider = ({
   const sliderValue = isLive ? max : currentTime;
 
   const stopPlayback = useCallback(() => {
-    clearInterval(playIntervalRef.current);
-    playIntervalRef.current = undefined;
     setIsPlaying(false);
   }, []);
 
@@ -105,37 +102,56 @@ const HistorySlider = ({
   const fwd1 = useRepeatAction(useCallback(() => { stopPlayback(); step(60); }, [step, stopPlayback]));
   const fwd5 = useRepeatAction(useCallback(() => { stopPlayback(); step(300); }, [step, stopPlayback]));
 
-  // Playback interval — reads speed from ref so changing speed doesn't restart the interval
+  // RAF-based playback — tracks wall-clock time for smooth advancement
+  const rafRef = useRef(0);
+  const playStartWallRef = useRef(0);
+  const playStartTimeRef = useRef(0);
+  const lastEmitRef = useRef(0);
+  const endTimeRef = useRef(endTime);
+  endTimeRef.current = endTime;
+
   useEffect(() => {
     if (!isPlaying) return;
-    playIntervalRef.current = setInterval(() => {
-      onTimeChange((prev) => {
-        const base = prev ?? startTime;
-        const next = base + playbackSpeedRef.current;
-        if (next > endTime) {
-          setTimeout(stopPlayback, 0);
-          return null;
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(playIntervalRef.current);
-  }, [isPlaying, startTime, endTime, onTimeChange, stopPlayback]);
 
-  // Clean up on unmount
-  useEffect(() => () => clearInterval(playIntervalRef.current), []);
+    playStartWallRef.current = performance.now();
+    lastEmitRef.current = 0;
+
+    const tick = () => {
+      const elapsed = (performance.now() - playStartWallRef.current) / 1000;
+      const simTime = playStartTimeRef.current + elapsed * playbackSpeedRef.current;
+
+      if (simTime > endTimeRef.current) {
+        onTimeChange(null);
+        stopPlayback();
+        return;
+      }
+
+      // Throttle React state updates to every 200ms wall-clock
+      const now = performance.now();
+      if (now - lastEmitRef.current >= 200) {
+        lastEmitRef.current = now;
+        onTimeChange(Math.round(simTime));
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [isPlaying, onTimeChange, stopPlayback]);
 
   const togglePlayback = useCallback(() => {
     if (isPlaying) {
       stopPlayback();
     } else {
-      // If live, start from beginning
+      // Set the starting sim-time before enabling playback
+      playStartTimeRef.current = isLive ? startTime : (currentTime ?? startTime);
       if (isLive) {
         onTimeChange(startTime);
       }
       setIsPlaying(true);
     }
-  }, [isPlaying, isLive, startTime, onTimeChange, stopPlayback]);
+  }, [isPlaying, isLive, startTime, currentTime, onTimeChange, stopPlayback]);
 
   const speeds = [1, 5, 20] as const;
   const cycleSpeed = useCallback(() => {
