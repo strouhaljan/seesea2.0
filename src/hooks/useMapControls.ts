@@ -41,7 +41,10 @@ export function useMapControls() {
     }
     window.dispatchEvent(new Event("selectedLegChanged"));
   }, [selectedLegId]);
-  useEffect(() => { localStorage.setItem("colorMode", colorMode); }, [colorMode]);
+  useEffect(() => {
+    localStorage.setItem("colorMode", colorMode);
+    window.dispatchEvent(new Event("colorModeChanged"));
+  }, [colorMode]);
   useEffect(() => { localStorage.setItem("showOnlyHighlighted", String(showOnlyHighlighted)); }, [showOnlyHighlighted]);
   useEffect(() => { localStorage.setItem("showWind", String(showWind)); }, [showWind]);
   useEffect(() => { localStorage.setItem("windModel", windModel); }, [windModel]);
