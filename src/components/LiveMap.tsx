@@ -16,6 +16,7 @@ import { useWindOverlay } from "../hooks/useWindOverlay";
 import { useFollowVessel } from "../hooks/useFollowVessel";
 import { useDistanceMeasure } from "../hooks/useDistanceMeasure";
 import { MapControls } from "./MapControls";
+import { WindSpeedLegend } from "./WindSpeedLegend";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -140,6 +141,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   return (
     <div className="map-wrapper">
       <div ref={mapContainer} className="map-container" />
+      {controls.colorMode === "wind" && <WindSpeedLegend />}
       <MapControls
         controlsOpen={controlsOpen}
         legs={legs}
