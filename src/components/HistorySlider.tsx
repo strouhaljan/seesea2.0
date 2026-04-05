@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { MutableRefObject, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Play, Pause } from "lucide-react";
 import { formatDate } from "../utils/dateUtils";
 import "./HistorySlider.css";
@@ -11,6 +11,8 @@ interface HistorySliderProps {
   /** Selected timestamp, or null for live mode */
   currentTime: number | null;
   onTimeChange: React.Dispatch<React.SetStateAction<number | null>>;
+  /** Ref updated at 60fps with the precise simulated time (seconds) during playback */
+  simTimeRef?: MutableRefObject<number | null>;
 }
 
 /** Hook that fires a callback on press, then repeatedly every 250ms while held */
@@ -49,6 +51,7 @@ const HistorySlider = ({
   endTime,
   currentTime,
   onTimeChange,
+  simTimeRef,
 }: HistorySliderProps) => {
   const [expanded, setExpanded] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -70,19 +73,22 @@ const HistorySlider = ({
       stopPlayback();
       const val = parseInt(e.target.value, 10);
       if (val > endTime) {
+        if (simTimeRef) simTimeRef.current = null;
         onTimeChange(null);
       } else {
+        if (simTimeRef) simTimeRef.current = val;
         onTimeChange(val);
       }
     },
-    [endTime, onTimeChange, stopPlayback],
+    [endTime, onTimeChange, stopPlayback, simTimeRef],
   );
 
   const handleGoLive = useCallback(() => {
     stopPlayback();
+    if (simTimeRef) simTimeRef.current = null;
     onTimeChange(null);
     setExpanded(false);
-  }, [onTimeChange, stopPlayback]);
+  }, [onTimeChange, stopPlayback, simTimeRef]);
 
   const step = useCallback(
     (seconds: number) => {
@@ -121,10 +127,14 @@ const HistorySlider = ({
       const simTime = playStartTimeRef.current + elapsed * playbackSpeedRef.current;
 
       if (simTime > endTimeRef.current) {
+        if (simTimeRef) simTimeRef.current = null;
         onTimeChange(null);
         stopPlayback();
         return;
       }
+
+      // Update simTimeRef at full frame rate for smooth interpolation
+      if (simTimeRef) simTimeRef.current = simTime;
 
       // Throttle React state updates to every 200ms wall-clock
       const now = performance.now();

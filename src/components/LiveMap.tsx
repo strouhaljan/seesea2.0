@@ -1,10 +1,11 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, MutableRefObject, useEffect, useImperativeHandle, useRef, useState } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { VesselDataPoint } from "../types/tripData";
 import { useEventConfig } from "../hooks/useEventConfig";
 import { MAP_STYLES, DEFAULT_CENTER, getSavedZoom, saveZoom, getSavedTheme } from "../utils/mapConfig";
 import { TailsData } from "../hooks/useTails";
+import { HistoryTimelines } from "../hooks/useHistoryData";
 import { LegMarker } from "../hooks/useLegMarkers";
 import { useMapControls } from "../hooks/useMapControls";
 import { useVesselMarkers } from "../hooks/useVesselMarkers";
@@ -38,6 +39,8 @@ interface LiveMapProps {
   onBoatClick: (boatId: number) => void;
   onClearActive: () => void;
   isHistoryMode?: boolean;
+  historyTimelines?: HistoryTimelines;
+  simTimeRef?: MutableRefObject<number | null>;
   controlsOpen: boolean;
   onToggleControls: () => void;
 }
@@ -47,7 +50,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   legs, activeLegId,
   activeBoatId, followedBoatId,
   onBoatClick, onClearActive,
-  isHistoryMode = false, controlsOpen, onToggleControls,
+  isHistoryMode = false, historyTimelines, simTimeRef, controlsOpen, onToggleControls,
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
@@ -102,6 +105,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     showOnlyHighlighted: controls.showOnlyHighlighted,
     colorMode: controls.colorMode,
     activeBoatId, followedBoatId, onBoatClick,
+    isHistoryMode, historyTimelines, simTimeRef,
   });
 
   useFutureProjections(map, mapLoaded, {
