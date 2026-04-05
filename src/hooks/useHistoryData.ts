@@ -41,7 +41,6 @@ class ChunkCache {
   async getChunk(
     eventId: number,
     hourStart: number,
-    signal?: AbortSignal,
   ): Promise<ChunkData | null> {
     const k = this.key(eventId, hourStart);
 
@@ -52,7 +51,7 @@ class ChunkCache {
     const existing = this.inflight.get(k);
     if (existing) return existing;
 
-    const promise = this.fetchChunk(eventId, hourStart, signal, k);
+    const promise = this.fetchChunk(eventId, hourStart, k);
     this.inflight.set(k, promise);
     promise.finally(() => this.inflight.delete(k));
     return promise;
@@ -70,13 +69,11 @@ class ChunkCache {
   private async fetchChunk(
     eventId: number,
     hourStart: number,
-    signal: AbortSignal | undefined,
     cacheKey: string,
   ): Promise<ChunkData | null> {
     try {
       const res = await fetch(
         `/api/data2/${eventId}/chunk?hour=${hourStart}`,
-        signal ? { signal } : undefined,
       );
       if (!res.ok) return null;
       const data: ChunkData = await res.json();
@@ -89,7 +86,6 @@ class ChunkCache {
       this.chunks.set(cacheKey, data);
       return data;
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return null;
       console.error("Failed to fetch chunk:", err);
       return null;
     }
@@ -113,7 +109,6 @@ export function useHistoryData(
   const [historyTails, setHistoryTails] = useState<TailsData>({});
   const [historyTimelines, setHistoryTimelines] = useState<HistoryTimelines>({});
   const [loading, setLoading] = useState(false);
-  const abortRef = useRef<AbortController>(undefined);
   const latestRequestRef = useRef(0);
 
   const sliceData = useCallback(
@@ -207,10 +202,6 @@ export function useHistoryData(
 
     const requestId = ++latestRequestRef.current;
 
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
     const trailSeconds = trailMinutes * 60;
     const windowStart = selectedTime - trailSeconds;
     const windowEnd = selectedTime + 30; // small lookahead
@@ -248,8 +239,11 @@ export function useHistoryData(
     // Slow path: fetch missing chunks, then slice
     setLoading(true);
 
+    // Don't pass an abort signal — let chunk fetches complete and cache
+    // even if the user has already moved on. We discard stale results
+    // via latestRequestRef instead.
     Promise.all(
-      hours.map((h) => chunkCache.getChunk(eventId, h, controller.signal)),
+      hours.map((h) => chunkCache.getChunk(eventId, h)),
     ).then((chunks) => {
       if (requestId !== latestRequestRef.current) return;
 
@@ -261,7 +255,6 @@ export function useHistoryData(
 
       chunkCache.prefetch(eventId, lastHour + 3600);
     }).catch((err) => {
-      if (err instanceof DOMException && err.name === "AbortError") return;
       console.error("Failed to load history chunks:", err);
       setLoading(false);
     });
