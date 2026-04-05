@@ -6,9 +6,13 @@ interface ChunkData {
   objects: Record<string, VesselDataPoint[]>;
 }
 
+/** Sorted points per vessel covering the trail window — used for interpolation */
+export type HistoryTimelines = Record<string, VesselDataPoint[]>;
+
 interface UseHistoryDataResult {
   historyData: Record<string, VesselDataPoint>;
   historyTails: TailsData;
+  historyTimelines: HistoryTimelines;
   loading: boolean;
 }
 
@@ -27,6 +31,11 @@ class ChunkCache {
 
   private key(eventId: number, hourStart: number) {
     return `${eventId}:${hourStart}`;
+  }
+
+  /** Synchronous cache lookup — returns the chunk or undefined if not cached */
+  tryGetChunk(eventId: number, hourStart: number): ChunkData | undefined {
+    return this.chunks.get(this.key(eventId, hourStart));
   }
 
   async getChunk(
@@ -102,6 +111,7 @@ export function useHistoryData(
 ): UseHistoryDataResult {
   const [historyData, setHistoryData] = useState<Record<string, VesselDataPoint>>({});
   const [historyTails, setHistoryTails] = useState<TailsData>({});
+  const [historyTimelines, setHistoryTimelines] = useState<HistoryTimelines>({});
   const [loading, setLoading] = useState(false);
   const abortRef = useRef<AbortController>(undefined);
   const latestRequestRef = useRef(0);
@@ -112,6 +122,7 @@ export function useHistoryData(
 
       const positions: Record<string, VesselDataPoint> = {};
       const tails: TailsData = {};
+      const timelines: HistoryTimelines = {};
 
       for (const chunk of chunks) {
         if (!chunk) continue;
@@ -138,12 +149,23 @@ export function useHistoryData(
             }
           }
 
-          // Build tail points within the trail window
+          // Build tail points and timeline within the window
+          // Timeline includes one point after `time` for forward interpolation
           const tailPoints: TailPoint[] = [];
+          const timelinePoints: VesselDataPoint[] = [];
+          let addedNext = false;
           for (const p of points) {
             if (p.time < windowStart) continue;
-            if (p.time > time) break;
-            tailPoints.push([p.time, p.coords[0], p.coords[1], p.tws]);
+            if (p.time <= time) {
+              tailPoints.push([p.time, p.coords[0], p.coords[1], p.tws]);
+              timelinePoints.push(p);
+            } else if (!addedNext) {
+              // Include the first point after target time for interpolation
+              timelinePoints.push(p);
+              addedNext = true;
+            } else {
+              break;
+            }
           }
           if (tailPoints.length > 0) {
             if (!tails[vesselId]) {
@@ -152,15 +174,25 @@ export function useHistoryData(
               tails[vesselId].push(...tailPoints);
             }
           }
+          if (timelinePoints.length > 0) {
+            if (!timelines[vesselId]) {
+              timelines[vesselId] = timelinePoints;
+            } else {
+              timelines[vesselId].push(...timelinePoints);
+            }
+          }
         }
       }
 
-      // Sort merged tails by time (chunks may overlap at boundaries)
+      // Sort merged tails/timelines by time (chunks may overlap at boundaries)
       for (const points of Object.values(tails)) {
         points.sort((a, b) => a[0] - b[0]);
       }
+      for (const points of Object.values(timelines)) {
+        points.sort((a, b) => a.time - b.time);
+      }
 
-      return { positions, tails };
+      return { positions, tails, timelines };
     },
     [],
   );
@@ -169,6 +201,7 @@ export function useHistoryData(
     if (selectedTime === null || !eventId) {
       setHistoryData({});
       setHistoryTails({});
+      setHistoryTimelines({});
       return;
     }
 
@@ -189,22 +222,44 @@ export function useHistoryData(
       hours.push(h);
     }
 
+    // Fast path: if all chunks are already cached, slice synchronously
+    const syncChunks: (ChunkData | null)[] = [];
+    let allCached = true;
+    for (const h of hours) {
+      const c = chunkCache.tryGetChunk(eventId, h);
+      if (c) {
+        syncChunks.push(c);
+      } else {
+        allCached = false;
+        break;
+      }
+    }
+
+    if (allCached) {
+      const { positions, tails, timelines } = sliceData(selectedTime, trailMinutes, syncChunks);
+      setHistoryData(positions);
+      setHistoryTails(tails);
+      setHistoryTimelines(timelines);
+      setLoading(false);
+      chunkCache.prefetch(eventId, lastHour + 3600);
+      return;
+    }
+
+    // Slow path: fetch missing chunks, then slice
     setLoading(true);
 
     Promise.all(
       hours.map((h) => chunkCache.getChunk(eventId, h, controller.signal)),
     ).then((chunks) => {
-      // Discard stale responses
       if (requestId !== latestRequestRef.current) return;
 
-      const { positions, tails } = sliceData(selectedTime, trailMinutes, chunks);
+      const { positions, tails, timelines } = sliceData(selectedTime, trailMinutes, chunks);
       setHistoryData(positions);
       setHistoryTails(tails);
+      setHistoryTimelines(timelines);
       setLoading(false);
 
-      // Prefetch the next hour chunk for smooth forward playback
-      const nextHour = lastHour + 3600;
-      chunkCache.prefetch(eventId, nextHour);
+      chunkCache.prefetch(eventId, lastHour + 3600);
     }).catch((err) => {
       if (err instanceof DOMException && err.name === "AbortError") return;
       console.error("Failed to load history chunks:", err);
@@ -212,5 +267,5 @@ export function useHistoryData(
     });
   }, [eventId, selectedTime, trailMinutes, sliceData]);
 
-  return { historyData, historyTails, loading };
+  return { historyData, historyTails, historyTimelines, loading };
 }

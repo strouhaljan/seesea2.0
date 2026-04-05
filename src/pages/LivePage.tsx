@@ -88,7 +88,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   const [trailMinutes, setTrailMinutes] = useState(
     () => parseInt(localStorage.getItem("trailMinutes") || "0", 10),
   );
-  const { historyData, historyTails } = useHistoryData(eventId, selectedTime, trailMinutes);
+  const { historyData, historyTails, historyTimelines } = useHistoryData(eventId, selectedTime, trailMinutes);
+  const simTimeRef = useRef<number | null>(null);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
   const [followedBoatId, setFollowedBoatId] = useState<number | null>(null);
 
@@ -246,6 +247,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           onBoatClick={handleBoatClick}
           onClearActive={handleClearActive}
           isHistoryMode={isHistoryMode}
+          historyTimelines={historyTimelines}
+          simTimeRef={simTimeRef}
           controlsOpen={controlsOpen}
           onToggleControls={onToggleControls}
         />
@@ -281,6 +284,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
         endTime={legEndTime < nowTime ? legEndTime : nowTime}
         currentTime={selectedTime}
         onTimeChange={setSelectedTime}
+        simTimeRef={simTimeRef}
       />
     </div>
   );

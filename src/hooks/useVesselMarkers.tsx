@@ -8,6 +8,7 @@ import { CENTER_VESSEL_ID } from "../utils/mapConfig";
 import { OUR_BOAT } from "../config";
 import BoatIcon from "../components/BoatIcon";
 import { Crew } from "../hooks/useEventConfig";
+import { HistoryTimelines } from "../hooks/useHistoryData";
 
 interface UseVesselMarkersOptions {
   vesselsData: Record<string, VesselDataPoint>;
@@ -18,6 +19,9 @@ interface UseVesselMarkersOptions {
   activeBoatId: number | null;
   followedBoatId: number | null;
   onBoatClick: (boatId: number) => void;
+  isHistoryMode?: boolean;
+  historyTimelines?: HistoryTimelines;
+  simTimeRef?: MutableRefObject<number | null>;
 }
 
 export function useVesselMarkers(
@@ -25,11 +29,15 @@ export function useVesselMarkers(
   mapLoaded: boolean,
   options: UseVesselMarkersOptions,
 ) {
-  const { vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, followedBoatId, onBoatClick } = options;
+  const { vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, followedBoatId, onBoatClick, isHistoryMode, historyTimelines, simTimeRef } = options;
   const markersRef = useRef<Record<string, Marker>>({});
   const rootsRef = useRef<Record<string, Root>>({});
   const hasCenteredRef = useRef(false);
   const vesselsSnapshotRef = useRef<{ data: Record<string, VesselDataPoint>; receivedAt: number }>({ data: {}, receivedAt: 0 });
+  const historyTimelinesRef = useRef<HistoryTimelines | undefined>(historyTimelines);
+  historyTimelinesRef.current = historyTimelines;
+  const isHistoryModeRef = useRef(isHistoryMode);
+  isHistoryModeRef.current = isHistoryMode;
 
   // Snapshot vessel data with receive timestamp for interpolation
   useEffect(() => {
@@ -38,23 +46,63 @@ export function useVesselMarkers(
     }
   }, [vesselsData]);
 
-  // Animate marker positions between data updates using SOG/COG projection
+  // Animate marker positions — live: SOG/COG projection, history: timeline interpolation
   useEffect(() => {
     if (!mapLoaded) return;
     let raf = 0;
     const tick = () => {
-      const { data, receivedAt } = vesselsSnapshotRef.current;
-      if (receivedAt > 0) {
-        const now = performance.now();
-        const elapsedMin = (now - receivedAt) / 60_000;
-        for (const [id, vessel] of Object.entries(data)) {
-          const marker = markersRef.current[id];
-          if (!marker || !vessel.coords) continue;
-          const cog = vessel.cog || vessel.hdg || 0;
-          const sog = vessel.sog || 0;
-          if (sog > 0 && cog) {
-            const pos = futurePosition(vessel.coords, sog, cog, elapsedMin);
-            marker.setLngLat(pos);
+      if (isHistoryModeRef.current && simTimeRef) {
+        // History mode: interpolate between timeline data points
+        const t = simTimeRef.current;
+        const timelines = historyTimelinesRef.current;
+        if (t !== null && timelines) {
+          for (const [id, points] of Object.entries(timelines)) {
+            const marker = markersRef.current[id];
+            if (!marker || points.length === 0) continue;
+
+            // Binary search for the last point <= t
+            let lo = 0;
+            let hi = points.length - 1;
+            let idx = 0;
+            while (lo <= hi) {
+              const mid = (lo + hi) >>> 1;
+              if (points[mid].time <= t) {
+                idx = mid;
+                lo = mid + 1;
+              } else {
+                hi = mid - 1;
+              }
+            }
+
+            const a = points[idx];
+            const b = points[idx + 1];
+
+            if (b && b.time > a.time) {
+              // Lerp between a and b
+              const frac = (t - a.time) / (b.time - a.time);
+              const lng = a.coords[0] + (b.coords[0] - a.coords[0]) * frac;
+              const lat = a.coords[1] + (b.coords[1] - a.coords[1]) * frac;
+              marker.setLngLat([lng, lat]);
+            } else {
+              marker.setLngLat(a.coords as [number, number]);
+            }
+          }
+        }
+      } else {
+        // Live mode: project forward using SOG/COG
+        const { data, receivedAt } = vesselsSnapshotRef.current;
+        if (receivedAt > 0) {
+          const now = performance.now();
+          const elapsedMin = (now - receivedAt) / 60_000;
+          for (const [id, vessel] of Object.entries(data)) {
+            const marker = markersRef.current[id];
+            if (!marker || !vessel.coords) continue;
+            const cog = vessel.cog || vessel.hdg || 0;
+            const sog = vessel.sog || 0;
+            if (sog > 0 && cog) {
+              const pos = futurePosition(vessel.coords, sog, cog, elapsedMin);
+              marker.setLngLat(pos);
+            }
           }
         }
       }
