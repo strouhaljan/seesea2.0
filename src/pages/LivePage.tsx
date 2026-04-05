@@ -3,13 +3,11 @@ import { VesselDataPoint } from "../types/tripData";
 import LiveMap, { LiveMapHandle } from "../components/LiveMap";
 import BoatPanel from "../components/BoatPanel";
 import HistorySlider from "../components/HistorySlider";
-import { WindSpeedLegend } from "../components/WindSpeedLegend";
 import { usePolling } from "../hooks/usePolling";
 import { useEventConfig } from "../hooks/useEventConfig";
 import { useTails } from "../hooks/useTails";
 import { useLegMarkers } from "../hooks/useLegMarkers";
 import { useHistoryData } from "../hooks/useHistoryData";
-import type { ColorMode } from "../types/map";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -98,15 +96,6 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
     const handler = () => setTrailMinutes(parseInt(localStorage.getItem("trailMinutes") || "0", 10));
     window.addEventListener("trailMinutesChanged", handler);
     return () => window.removeEventListener("trailMinutesChanged", handler);
-  }, []);
-
-  const [colorMode, setColorMode] = useState<ColorMode>(
-    () => (localStorage.getItem("colorMode") as ColorMode) || "seesea",
-  );
-  useEffect(() => {
-    const handler = () => setColorMode((localStorage.getItem("colorMode") as ColorMode) || "seesea");
-    window.addEventListener("colorModeChanged", handler);
-    return () => window.removeEventListener("colorModeChanged", handler);
   }, []);
 
   const isHistoryMode = selectedTime !== null;
@@ -276,8 +265,6 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           </div>
         );
       })()}
-
-      {colorMode === "wind" && <WindSpeedLegend />}
 
       <HistorySlider
         startTime={legStartTime}
