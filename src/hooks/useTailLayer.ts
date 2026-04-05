@@ -1,4 +1,4 @@
-import { useEffect, MutableRefObject } from "react";
+import { useEffect, useRef, MutableRefObject } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import { TailsData } from "./useTails";
 import { Crew } from "./useEventConfig";
@@ -7,6 +7,8 @@ import { getColorBySpeed } from "../utils/wind";
 
 const TAIL_LINE_SOURCE = "tail-lines";
 const TAIL_LINE_LAYER = "tail-lines-layer";
+const WIND_PREFIX = "tail-wind-";
+const WIND_LAYER_PREFIX = "tail-wind-layer-";
 
 interface UseTailLayerOptions {
   tails: TailsData;
@@ -24,11 +26,14 @@ export function useTailLayer(
   options: UseTailLayerOptions,
 ) {
   const { tails, trailMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted, colorMode } = options;
+  const activeWindIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
+    const m = map.current;
 
     const tailFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+    const nextWindIds = new Set<string>();
 
     if (trailMinutes > 0 && Object.keys(tails).length > 0) {
       const cutoff = isHistoryMode ? 0 : Date.now() / 1000 - trailMinutes * 60;
@@ -47,17 +52,48 @@ export function useTailLayer(
         const hasWindData = useWindColors && filtered.some((p) => p[3] !== undefined);
 
         if (hasWindData) {
-          // Create per-segment features colored by wind speed
-          for (let i = 0; i < filtered.length - 1; i++) {
-            const p1 = filtered[i];
-            const p2 = filtered[i + 1];
-            const windSpeed = p1[3];
-            tailFeatures.push({
+          // Per-vessel source+layer with line-gradient for a true smooth gradient
+          const sourceId = WIND_PREFIX + vesselId;
+          const layerId = WIND_LAYER_PREFIX + vesselId;
+          nextWindIds.add(vesselId);
+
+          const coords: [number, number][] = filtered.map((p) => [p[1], p[2]]);
+          const geojson: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
+            type: "FeatureCollection",
+            features: [{
               type: "Feature",
-              properties: { color: getColorBySpeed(windSpeed) },
-              geometry: {
-                type: "LineString",
-                coordinates: [[p1[1], p1[2]], [p2[1], p2[2]]],
+              properties: {},
+              geometry: { type: "LineString", coordinates: coords },
+            }],
+          };
+
+          // Build gradient stops: [progress, color, progress, color, ...]
+          const gradientStops: (number | string)[] = [];
+          for (let i = 0; i < filtered.length; i++) {
+            const progress = filtered.length > 1 ? i / (filtered.length - 1) : 0;
+            gradientStops.push(progress, getColorBySpeed(filtered[i][3]));
+          }
+
+          const existingSource = m.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined;
+          if (existingSource) {
+            existingSource.setData(geojson);
+            m.setPaintProperty(layerId, "line-gradient", [
+              "interpolate", ["linear"], ["line-progress"],
+              ...gradientStops,
+            ]);
+          } else {
+            m.addSource(sourceId, { type: "geojson", data: geojson, lineMetrics: true });
+            m.addLayer({
+              id: layerId,
+              type: "line",
+              source: sourceId,
+              paint: {
+                "line-gradient": [
+                  "interpolate", ["linear"], ["line-progress"],
+                  ...gradientStops,
+                ],
+                "line-width": 2,
+                "line-opacity": 0.7,
               },
             });
           }
@@ -73,16 +109,28 @@ export function useTailLayer(
       });
     }
 
+    // Remove wind sources/layers for vessels no longer shown
+    for (const oldId of activeWindIds.current) {
+      if (!nextWindIds.has(oldId)) {
+        const layerId = WIND_LAYER_PREFIX + oldId;
+        const sourceId = WIND_PREFIX + oldId;
+        if (m.getLayer(layerId)) m.removeLayer(layerId);
+        if (m.getSource(sourceId)) m.removeSource(sourceId);
+      }
+    }
+    activeWindIds.current = nextWindIds;
+
+    // Update the shared source/layer for non-wind trails
     const tailGeojson: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
       type: "FeatureCollection",
       features: tailFeatures,
     };
-    const existingSource = map.current.getSource(TAIL_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+    const existingSource = m.getSource(TAIL_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
     if (existingSource) {
       existingSource.setData(tailGeojson);
     } else {
-      map.current.addSource(TAIL_LINE_SOURCE, { type: "geojson", data: tailGeojson });
-      map.current.addLayer({
+      m.addSource(TAIL_LINE_SOURCE, { type: "geojson", data: tailGeojson });
+      m.addLayer({
         id: TAIL_LINE_LAYER,
         type: "line",
         source: TAIL_LINE_SOURCE,
