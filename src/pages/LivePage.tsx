@@ -9,6 +9,7 @@ import { useTails } from "../hooks/useTails";
 import { useLegMarkers } from "../hooks/useLegMarkers";
 import { useHistoryData } from "../hooks/useHistoryData";
 import { now as raceNow } from "../utils/clock";
+import ReplayBadge from "../components/ReplayBadge";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -256,6 +257,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
       </div>
 
       {lastUpdated && !error && !isHistoryMode && <div className="live-dot" />}
+      <ReplayBadge />
 
       {followedBoatId != null && (() => {
         const crew = crews.find((c) => c.id === followedBoatId);
