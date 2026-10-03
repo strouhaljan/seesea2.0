@@ -1,20 +1,13 @@
 import { Router } from "express";
+import { upstream, type RawEventLeg } from "../upstream/index.js";
+import { sendUpstreamError } from "./upstreamError.js";
 
 const router = Router();
-
-interface EventLeg {
-  id: number;
-  name: string;
-  active: number;
-  start: string;
-  end: string;
-  race_type: string;
-}
 
 interface EventConfig {
   eventId: number;
   crews: unknown[];
-  legs: EventLeg[];
+  legs: RawEventLeg[];
   fetchedAt: number;
 }
 
@@ -31,14 +24,7 @@ router.get("/:slug", async (req, res) => {
   }
 
   try {
-    const url = `https://app.seesea.cz/api/cc_event/${slug}/`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      res.status(response.status).json({ error: "Upstream error" });
-      return;
-    }
-
-    const data = await response.json();
+    const data = await upstream.getEvent(slug);
     const config: EventConfig = {
       eventId: data.cc_event_id,
       crews: data.cc_object ?? [],
@@ -48,8 +34,8 @@ router.get("/:slug", async (req, res) => {
 
     cache.set(slug, config);
     res.json({ eventId: config.eventId, crews: config.crews, legs: config.legs });
-  } catch {
-    res.status(502).json({ error: "Failed to fetch event config" });
+  } catch (err) {
+    sendUpstreamError(res, err, "Failed to fetch event config");
   }
 });
 

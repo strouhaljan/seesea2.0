@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { getWindSpeeds } from "./data2";
+import { upstream } from "../upstream/index.js";
+import { sendUpstreamError } from "./upstreamError.js";
 
 const router = Router();
 
@@ -32,16 +34,9 @@ function findNearestTws(
 
 router.get("/:eventId/:legId", async (req, res) => {
   const { eventId, legId } = req.params;
-  const url = `https://app.seesea.cz/api/cc_event/${eventId}/data/live/${legId}/tails`;
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      res.status(response.status).json({ error: "Upstream error" });
-      return;
-    }
-
-    const data = await response.json();
+    const data = await upstream.getTails(eventId, legId);
     const tails: Record<string, number[][]> = data.tails ?? {};
 
     // Find the time range across all tail points
@@ -70,8 +65,8 @@ router.get("/:eventId/:legId", async (req, res) => {
     }
 
     res.json(data);
-  } catch {
-    res.status(502).json({ error: "Failed to fetch upstream tails data" });
+  } catch (err) {
+    sendUpstreamError(res, err, "Failed to fetch upstream tails data");
   }
 });
 

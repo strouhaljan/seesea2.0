@@ -7,6 +7,7 @@ import windRouter, { warmWindCache } from "./routes/wind.js";
 import tailsRouter from "./routes/tails.js";
 import legRouter from "./routes/leg.js";
 import data2Router, { warmCache, purgeOldChunks } from "./routes/data2.js";
+import { upstream } from "./upstream/index.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
@@ -44,15 +45,9 @@ async function tryWarmCache() {
       return;
     }
 
-    const res = await fetch(`https://app.seesea.cz/api/cc_event/${slug}/`);
-    if (!res.ok) {
-      console.error(`Failed to fetch event config for ${slug}: ${res.status}`);
-      return;
-    }
-
-    const data = await res.json();
+    const data = await upstream.getEvent(slug);
     const eventId = String(data.cc_event_id);
-    const legs = (data.cc_event_leg ?? []) as { active: number; start: string; end: string }[];
+    const legs = data.cc_event_leg ?? [];
 
     const now = Date.now();
     const activeLeg = legs

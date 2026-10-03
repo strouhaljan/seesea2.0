@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { upstream } from "../upstream/index.js";
+import { sendUpstreamError } from "./upstreamError.js";
 
 const ALLOWED_FIELDS = ["coords", "hdg", "cog", "sog", "twa", "tws"] as const;
 
@@ -6,16 +8,9 @@ const router = Router();
 
 router.get("/:eventId", async (req, res) => {
   const { eventId } = req.params;
-  const url = `https://app.seesea.cz/api/cc_event/${eventId}/data/live`;
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      res.status(response.status).json({ error: "Upstream error" });
-      return;
-    }
-
-    const data = await response.json();
+    const data = await upstream.getLive(eventId);
     const stripped: Record<string, Record<string, unknown>> = {};
 
     for (const [id, vessel] of Object.entries(data.objects ?? {})) {
@@ -28,8 +23,8 @@ router.get("/:eventId", async (req, res) => {
     }
 
     res.json({ objects: stripped });
-  } catch {
-    res.status(502).json({ error: "Failed to fetch upstream data" });
+  } catch (err) {
+    sendUpstreamError(res, err, "Failed to fetch upstream data");
   }
 });
 
