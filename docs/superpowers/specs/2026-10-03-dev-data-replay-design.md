@@ -67,7 +67,7 @@ wind/<model>.json.gz        per-region raw Open-Meteo hourly response covering t
 
 ### 3. Recorder
 
-`server/scripts/record.ts`, run via `npm --prefix server run record -- <slug> [--legs <id,id>]`.
+`server/src/scripts/record.ts` (inside `src` so it is type-checked), run via `npm --prefix server run record -- <slug> [--legs <id,id>]`.
 
 - Uses `HttpUpstream` directly.
 - Default legs: all with `active === 1`.
@@ -85,7 +85,8 @@ wind/<model>.json.gz        per-region raw Open-Meteo hourly response covering t
 - `now()` → ms. Replay: `min(REPLAY_START + (Date.now() − bootTime) × speed, lastRecordedLegEnd)`. Otherwise `Date.now()`.
 - Rule: `clock.now()` for race time; `Date.now()` for cache ages (TTL / `fetchedAt`).
 - Call sites switched to `clock.now()`: `isCurrentHour` in `data2.ts` `fetchChunk`, `nowSeconds` in `warmCache`, active-leg detection in `tryWarmCache`.
-- `GET /api/clock` → `{now, speed, replay}` (`replay` is the slug or `null`).
+- `GET /api/clock` → `{now, speed, end, replay}` (`end` is the clamp time in ms or `null`; `replay` is the slug or `null`).
+- History chunk completeness (fixes an existing bug where a prefetched future hour was cached and persisted empty forever): a server chunk is *complete* only if `hourStart + 3600 ≤ clock.nowSeconds()` when fetched. Complete chunks are served from cache indefinitely and persisted to SQLite; others are refetched after the 60 s TTL and never persisted. On startup, SQLite rows with `fetched_at < (hour_start + 3600) × 1000` are ignored.
 
 ### 5. ReplayUpstream
 
@@ -108,13 +109,13 @@ Persistence: in replay the SQLite cache uses `:memory:`; `purgeOldChunks` is ski
 
 ### 6. Client
 
-- `src/utils/clock.ts`: `initClock()` fetches `/api/clock` once; `now()` returns `serverNow + (performance.now() − fetchedAt) × speed`, falling back to `Date.now()` if the request fails or replay is off. `getReplay()` exposes `{slug, speed} | null`.
+- `src/utils/clock.ts`: `initClock()` fetches `/api/clock` once; `now()` returns `min(serverNow + (performance.now() − fetchedAt) × speed, end)`, falling back to `Date.now()` if the request fails or replay is off. `getReplay()` exposes `{slug, speed} | null`.
 - `main.tsx` awaits `initClock()` before the first render.
 - Switched to `clock.now()`: `LivePage` auto-leg detection and `nowTime`; `useTailLayer` trail cutoff; `windGrid` client cache (keyed by sim hour instead of a 30 min wall TTL).
 - Unchanged (wall clock): `usePolling` backoff, `formatDataAge`, `lastUpdated`.
 - `useEventConfigLoader` uses the replay slug when present, else `VITE_EVENT_SLUG`.
 - Replay badge next to `.live-dot`: `REPLAY · <slug> · ×<speed> · HH:MM`, ticking each second, only rendered in replay.
-- `ChunkCache` fix: a chunk whose hour contains `clock.now()` is returned but not stored, so it is re-fetched on the next request (fixes the same staleness in production).
+- `ChunkCache` fix: a chunk whose hour has not fully elapsed at `clock.now()` (current or future hour) is cached for 30 s only, then re-fetched; complete hours are cached indefinitely (fixes the same staleness in production).
 
 ### 7. Dev workflow & docs
 
