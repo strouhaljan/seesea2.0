@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import { TailPoint, TailsData } from "./useTails";
+import { nowSeconds } from "../utils/clock";
 
 interface ChunkData {
   objects: Record<string, VesselDataPoint[]>;
+}
+
+/** The current (or a future) hour keeps growing — refetch it after this long. */
+const INCOMPLETE_CHUNK_TTL_MS = 30_000;
+
+interface CachedChunk {
+  data: ChunkData;
+  expiresAt: number;
 }
 
 /** Sorted points per vessel covering the trail window — used for interpolation */
@@ -26,16 +35,21 @@ function floorHour(unixSeconds: number): number {
  * data that's already in memory.
  */
 class ChunkCache {
-  private chunks = new Map<string, ChunkData>();
+  private chunks = new Map<string, CachedChunk>();
   private inflight = new Map<string, Promise<ChunkData | null>>();
 
   private key(eventId: number, hourStart: number) {
     return `${eventId}:${hourStart}`;
   }
 
+  private fresh(key: string): ChunkData | undefined {
+    const entry = this.chunks.get(key);
+    return entry && entry.expiresAt > Date.now() ? entry.data : undefined;
+  }
+
   /** Synchronous cache lookup — returns the chunk or undefined if not cached */
   tryGetChunk(eventId: number, hourStart: number): ChunkData | undefined {
-    return this.chunks.get(this.key(eventId, hourStart));
+    return this.fresh(this.key(eventId, hourStart));
   }
 
   async getChunk(
@@ -45,7 +59,7 @@ class ChunkCache {
   ): Promise<ChunkData | null> {
     const k = this.key(eventId, hourStart);
 
-    const cached = this.chunks.get(k);
+    const cached = this.fresh(k);
     if (cached) return cached;
 
     // Deduplicate concurrent requests for the same chunk
@@ -61,7 +75,7 @@ class ChunkCache {
   /** Fire-and-forget prefetch — does not block on result */
   prefetch(eventId: number, hourStart: number) {
     const k = this.key(eventId, hourStart);
-    if (this.chunks.has(k) || this.inflight.has(k)) return;
+    if (this.fresh(k) || this.inflight.has(k)) return;
     const promise = this.fetchChunk(eventId, hourStart, undefined, k);
     this.inflight.set(k, promise);
     promise.finally(() => this.inflight.delete(k));
@@ -74,6 +88,7 @@ class ChunkCache {
     cacheKey: string,
   ): Promise<ChunkData | null> {
     try {
+      const complete = hourStart + 3600 <= nowSeconds();
       const res = await fetch(
         `/api/data2/${eventId}/chunk?hour=${hourStart}`,
         signal ? { signal } : undefined,
@@ -86,7 +101,10 @@ class ChunkCache {
         points.sort((a, b) => a.time - b.time);
       }
 
-      this.chunks.set(cacheKey, data);
+      this.chunks.set(cacheKey, {
+        data,
+        expiresAt: complete ? Infinity : Date.now() + INCOMPLETE_CHUNK_TTL_MS,
+      });
       return data;
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return null;

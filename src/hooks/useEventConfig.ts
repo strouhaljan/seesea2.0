@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { getReplay } from "../utils/clock";
 
 export interface Crew {
   id: number;
@@ -57,7 +58,8 @@ export function useEventConfigLoader(): EventConfigBase {
   });
 
   useEffect(() => {
-    const slug = import.meta.env.VITE_EVENT_SLUG || "vr-2026";
+    // In replay the server only knows the recorded event
+    const slug = getReplay()?.slug || import.meta.env.VITE_EVENT_SLUG || "vr-2026";
 
     fetch(`/api/event/${slug}`)
       .then((res) => {

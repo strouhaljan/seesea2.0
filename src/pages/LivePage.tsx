@@ -8,6 +8,7 @@ import { useEventConfig } from "../hooks/useEventConfig";
 import { useTails } from "../hooks/useTails";
 import { useLegMarkers } from "../hooks/useLegMarkers";
 import { useHistoryData } from "../hooks/useHistoryData";
+import { now as raceNow } from "../utils/clock";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -42,7 +43,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   const autoLeg = useMemo(() => {
     const active = legs.filter((l) => l.active === 1);
     if (active.length === 0) return null;
-    const now = Date.now();
+    const now = raceNow();
     const current = active.find(
       (l) => new Date(l.start).getTime() <= now && new Date(l.end).getTime() >= now,
     );
@@ -78,7 +79,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   const autoLegId = autoLeg?.id ?? null;
   const legStartTime = activeLeg ? Math.floor(new Date(activeLeg.start).getTime() / 1000) : 0;
   const legEndTime = activeLeg ? Math.floor(new Date(activeLeg.end).getTime() / 1000) : 0;
-  const nowTime = Math.floor(Date.now() / 1000);
+  const nowTime = Math.floor(raceNow() / 1000);
 
   const { tails, trackLengthMax } = useTails(eventId, activeLegId);
   const legMarkers = useLegMarkers(eventId, activeLegId);

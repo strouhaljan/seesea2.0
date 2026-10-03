@@ -4,6 +4,7 @@ import { TailsData } from "./useTails";
 import { Crew } from "./useEventConfig";
 import { ColorMode } from "../types/map";
 import { getColorBySpeed } from "../utils/wind";
+import { now as raceNow } from "../utils/clock";
 
 const TAIL_LINE_SOURCE = "tail-lines";
 const TAIL_LINE_LAYER = "tail-lines-layer";
@@ -36,7 +37,7 @@ export function useTailLayer(
     const nextWindIds = new Set<string>();
 
     if (trailMinutes > 0 && Object.keys(tails).length > 0) {
-      const cutoff = isHistoryMode ? 0 : Date.now() / 1000 - trailMinutes * 60;
+      const cutoff = isHistoryMode ? 0 : raceNow() / 1000 - trailMinutes * 60;
       Object.entries(tails).forEach(([vesselId, points]) => {
         const isHighlighted = highlightedCrews.has(parseInt(vesselId));
         const shouldShow = !showOnlyHighlighted || isHighlighted;

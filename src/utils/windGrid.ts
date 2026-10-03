@@ -1,4 +1,5 @@
 import { VesselDataPoint } from "../types/tripData";
+import { nowSeconds } from "./clock";
 
 export type WindModel = "icon_2i" | "ecmwf";
 
@@ -28,6 +29,8 @@ export type CompositeGrid = WindGridData[];
 interface CacheEntry {
   hours: CompositeGrid[]; // index 0 = current hour, 1..3 = +1h..+3h forecast
   fetchedAt: number;
+  /** Race hour (unix seconds / 3600) the forecast window starts at. */
+  hour: number;
 }
 
 const cache = new Map<WindModel, CacheEntry>();
@@ -82,8 +85,9 @@ export async function fetchWindGrid(model: WindModel): Promise<CompositeGrid> {
 }
 
 export async function fetchWindGrids(model: WindModel): Promise<CompositeGrid[]> {
+  const hour = Math.floor(nowSeconds() / 3600);
   const cached = cache.get(model);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+  if (cached && cached.hour === hour && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
     return cached.hours;
   }
 
@@ -103,7 +107,7 @@ export async function fetchWindGrids(model: WindModel): Promise<CompositeGrid[]>
   }
   // hours[hourIdx][regionIdx] → WindGridData
 
-  cache.set(model, { hours, fetchedAt: Date.now() });
+  cache.set(model, { hours, fetchedAt: Date.now(), hour });
   return hours;
 }
 
