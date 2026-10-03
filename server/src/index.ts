@@ -36,7 +36,7 @@ app.listen(PORT, () => {
     const { slug, legIds, start, speed } = clock.replay;
     console.log(`REPLAY ${slug} (legs ${legIds.join(", ")}) from ${new Date(start).toISOString()} at ×${speed}`);
   }
-  purgeOldChunks();
+  if (!clock.replay) purgeOldChunks();
   tryWarmCache();
   warmWindCache();
   // Re-check every 10 minutes — covers the case where no leg was active at

@@ -13,7 +13,10 @@ interface CacheChunk {
 }
 
 // --- SQLite persistence ---
-const dbPath = resolve(process.env.CACHE_DB_PATH ?? resolve(__dirname, "../../cache.db"));
+// Replay serves fixtures; keep its chunks out of the real on-disk cache
+const dbPath = clock.replay
+  ? ":memory:"
+  : resolve(process.env.CACHE_DB_PATH ?? resolve(__dirname, "../../cache.db"));
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 db.exec(`
