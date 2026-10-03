@@ -29,3 +29,7 @@ mock-server.js
 *.njsproj
 *.sln
 *.sw?
+
+# Recorded replay fixtures (only vr-2026 is versioned)
+server/fixtures/*
+!server/fixtures/vr-2026/
