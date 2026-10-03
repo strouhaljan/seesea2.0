@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { upstream, type WindModel } from "../upstream/index.js";
 import { MODEL_PARAMS, REGIONS, WIND_MODELS } from "../upstream/regions.js";
-import { sleep } from "../time.js";
+import * as clock from "../clock.js";
+import { floorHour, sleep } from "../time.js";
 
 const router = Router();
 
@@ -10,6 +11,8 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 interface CacheEntry {
   data: unknown;
   fetchedAt: number;
+  /** Race hour the 4-hour window starts at. */
+  hour: number;
 }
 
 const cache = new Map<WindModel, CacheEntry>();
@@ -40,8 +43,9 @@ async function fetchAllRegions(model: WindModel): Promise<unknown> {
 }
 
 async function getGridData(model: WindModel): Promise<unknown> {
+  const hour = floorHour(clock.nowSeconds());
   const cached = cache.get(model);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
+  if (cached && cached.hour === hour && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
     return cached.data;
   }
 
@@ -50,7 +54,7 @@ async function getGridData(model: WindModel): Promise<unknown> {
 
   const promise = fetchAllRegions(model)
     .then((data) => {
-      cache.set(model, { data, fetchedAt: Date.now() });
+      cache.set(model, { data, fetchedAt: Date.now(), hour });
       inflight.delete(model);
       return data;
     })

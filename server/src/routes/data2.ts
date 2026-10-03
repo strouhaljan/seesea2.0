@@ -3,10 +3,13 @@ import Database from "better-sqlite3";
 import { resolve } from "node:path";
 import { upstream, type DataHour, type SlimPoint } from "../upstream/index.js";
 import { floorHour } from "../time.js";
+import * as clock from "../clock.js";
 
 interface CacheChunk {
   objects: DataHour;
   fetchedAt: number;
+  /** The hour had fully elapsed (race time) when fetched, so the data can't change. */
+  complete: boolean;
 }
 
 // --- SQLite persistence ---
@@ -38,12 +41,14 @@ function loadFromDb() {
 
   let count = 0;
   for (const row of rows) {
-    const eid = row.event_id;
-    const key = `${eid}:${row.hour_start}`;
+    // Older versions persisted hours fetched before they ended; ignore those
+    if (row.fetched_at < (row.hour_start + 3600) * 1000) continue;
+    const key = `${row.event_id}:${row.hour_start}`;
     if (!memCache.has(key)) {
       memCache.set(key, {
         objects: JSON.parse(row.data),
         fetchedAt: row.fetched_at,
+        complete: true,
       });
       count++;
     }
@@ -61,19 +66,20 @@ async function fetchChunk(
   const key = `${eventId}:${hourStart}`;
   const existing = memCache.get(key);
   const now = Date.now();
-  const isCurrentHour = floorHour(now / 1000) === hourStart;
 
-  if (existing && (!isCurrentHour || now - existing.fetchedAt < CURRENT_CHUNK_TTL_MS)) {
+  if (existing && (existing.complete || now - existing.fetchedAt < CURRENT_CHUNK_TTL_MS)) {
     return existing;
   }
 
+  const complete = hourStart + 3600 <= clock.nowSeconds();
+
   try {
     const objects = await upstream.getDataHour(eventId, hourStart);
-    const chunk: CacheChunk = { objects, fetchedAt: now };
+    const chunk: CacheChunk = { objects, fetchedAt: now, complete };
     memCache.set(key, chunk);
 
-    // Persist historical chunks to SQLite (not the current hour — it changes)
-    if (!isCurrentHour) {
+    // Only finished hours are persisted — current and future hours still change
+    if (complete) {
       stmtUpsert.run(eventId, hourStart, JSON.stringify(objects), now);
     }
 
@@ -84,7 +90,7 @@ async function fetchChunk(
 }
 
 async function warmCache(eventId: string, fromTime: number) {
-  const nowSeconds = Math.floor(Date.now() / 1000);
+  const nowSeconds = clock.nowSeconds();
   const firstHour = floorHour(fromTime);
   const lastHour = floorHour(nowSeconds);
 

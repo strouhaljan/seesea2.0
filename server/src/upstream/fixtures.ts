@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
-import type { WindModel } from "./types.js";
+import type { RawEvent, RawEventLeg, WindModel } from "./types.js";
 
 export const FIXTURES_DIR = resolve(process.env.FIXTURES_DIR ?? resolve(__dirname, "../../fixtures"));
 
@@ -43,3 +43,23 @@ export function readGzJson<T>(path: string): T {
 }
 
 export { existsSync };
+
+export interface Fixture {
+  manifest: Manifest;
+  event: RawEvent;
+  /** Event legs limited to the ones actually recorded. */
+  legs: RawEventLeg[];
+}
+
+export function loadFixture(slug: string): Fixture {
+  const paths = fixturePaths(slug);
+  if (!existsSync(paths.manifest)) {
+    throw new Error(
+      `No fixture for "${slug}" in ${paths.dir}. Record it with: npm --prefix server run record -- ${slug}`,
+    );
+  }
+  const manifest = readJson<Manifest>(paths.manifest);
+  const event = readJson<RawEvent>(paths.event);
+  const legs = (event.cc_event_leg ?? []).filter((l) => manifest.legIds.includes(l.id));
+  return { manifest, event, legs };
+}
