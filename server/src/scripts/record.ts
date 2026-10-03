@@ -70,7 +70,11 @@ async function main() {
       hours.add(h);
     }
   }
-  const todo = [...hours].sort((a, b) => a - b).filter((h) => !existsSync(paths.dataHour(h)));
+  // Hours that haven't ended yet would be saved incomplete and then skipped forever
+  const nowS = Math.floor(Date.now() / 1000);
+  const sorted = [...hours].sort((a, b) => a - b);
+  for (const h of sorted.filter((h) => h + 3600 > nowS)) missing.push(`data2 ${h} (not over yet)`);
+  const todo = sorted.filter((h) => h + 3600 <= nowS && !existsSync(paths.dataHour(h)));
   console.log(`History: ${hours.size} hours, ${todo.length} to fetch`);
 
   for (let i = 0; i < todo.length; i += BATCH_SIZE) {
@@ -90,11 +94,15 @@ async function main() {
 
   // Wind: whole UTC days spanning all recorded legs plus the 4 h forecast window
   const startDate = utcDate(Math.min(...recordedLegs.map((l) => toSeconds(l.start))));
-  const endDate = utcDate(Math.max(...recordedLegs.map((l) => toSeconds(l.end))) + WIND_LOOKAHEAD_S);
-  // Same legs as last time → same date range, so existing wind files are still valid
-  const sameLegs = previous?.legIds.join() === recordedLegIds.join();
+  const windEnd = Math.max(...recordedLegs.map((l) => toSeconds(l.end))) + WIND_LOOKAHEAD_S;
+  const endDate = utcDate(windEnd);
+  // Existing wind files are final if they cover the same legs and were recorded after the window ended
+  const windFinal =
+    previous?.legIds.join() === recordedLegIds.join() &&
+    Date.parse(previous.recordedAt) / 1000 >= windEnd;
+  if (windEnd > nowS) missing.push("wind (window not over yet)");
   for (const model of WIND_MODELS) {
-    if (sameLegs && existsSync(paths.wind(model))) {
+    if (windFinal && existsSync(paths.wind(model))) {
       console.log(`Wind ${model}: already recorded`);
       continue;
     }

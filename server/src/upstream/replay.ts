@@ -102,8 +102,11 @@ export class ReplayUpstream implements Upstream {
 
   async getLeg(eventId: string, legId: string): Promise<unknown> {
     this.assertEvent(eventId);
+    // Only recorded leg ids reach the filesystem (legId comes straight from the URL)
     const path = this.paths.leg(legId);
-    if (!existsSync(path)) throw new UpstreamError(404, `Leg ${legId} is not recorded`);
+    if (!this.fixture.manifest.legIds.includes(Number(legId)) || !existsSync(path)) {
+      throw new UpstreamError(404, `Leg ${legId} is not recorded`);
+    }
     return readJson(path);
   }
 
