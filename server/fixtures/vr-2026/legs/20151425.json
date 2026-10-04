@@ -1,0 +1,65 @@
+[
+  {
+    "id": 4371,
+    "marker_type": "dtf",
+    "name": "DTF",
+    "lat": 43.1953,
+    "lon": 16.0889,
+    "lat_2": null,
+    "lon_2": null
+  },
+  {
+    "id": 4372,
+    "marker_type": "start",
+    "name": "Start",
+    "lat": 42.625956,
+    "lon": 17.946,
+    "lat_2": 42.6338,
+    "lon_2": 17.9428
+  },
+  {
+    "id": 4374,
+    "marker_type": "line",
+    "name": "Zakázaná zóna",
+    "lat": 43.853219,
+    "lon": 15.205,
+    "lat_2": 43.0723,
+    "lon_2": 16.2546
+  },
+  {
+    "id": 4375,
+    "marker_type": "line",
+    "name": "Zakázaná zóna",
+    "lat": 43.0723,
+    "lon": 16.2546,
+    "lat_2": 42.7504,
+    "lon_2": 16.4903
+  },
+  {
+    "id": 4376,
+    "marker_type": "line",
+    "name": "Zakázaná zóna",
+    "lat": 42.7504,
+    "lon": 16.4903,
+    "lat_2": 42.3928,
+    "lon_2": 18.5311
+  },
+  {
+    "id": 4378,
+    "marker_type": "finish",
+    "name": "Cíl",
+    "lat": 43.1953,
+    "lon": 16.3669,
+    "lat_2": 43.1953,
+    "lon_2": 16.0889
+  },
+  {
+    "id": 4379,
+    "marker_type": "buoy",
+    "name": "Sv. Andija LB",
+    "lat": 42.64468,
+    "lon": 17.9537,
+    "lat_2": null,
+    "lon_2": null
+  }
+]

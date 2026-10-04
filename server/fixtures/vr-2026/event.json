@@ -1,0 +1,747 @@
+{
+  "cc_event_id": 201619,
+  "name": "VR 2026",
+  "description": "Velikonoční regata 2026",
+  "status_text": "finished",
+  "race_type": "offshore",
+  "eventtype_text": "boat_race",
+  "event_end": "2026-04-04T19:00:00+02:00",
+  "event_start": "2026-03-28T12:00:00+01:00",
+  "slug": "vr-2026",
+  "active": false,
+  "default_lat": 43.826011,
+  "default_lng": 15.589516,
+  "cc_object": [
+    {
+      "id": 201503105,
+      "name": "Jakubec",
+      "start_number": 1,
+      "description": "Pavel Jakubec - Dušín Czech sailing team - MH85",
+      "track_color": "#392abf",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503106,
+      "name": "Kelemen",
+      "start_number": 2,
+      "description": "Michal Kelemen - Kolotočári - MH79",
+      "track_color": "#daa520",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503107,
+      "name": "Fiala",
+      "start_number": 3,
+      "description": "Michal Fiala - Shrek - MH83",
+      "track_color": "#1b6b0a",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503108,
+      "name": "Novotný",
+      "start_number": 4,
+      "description": "Tomáš Novotný - SPECTRA",
+      "track_color": "#32a0fa",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503109,
+      "name": "Kupka",
+      "start_number": 5,
+      "description": "Petr Kupka - Lirica Crew - MONDO",
+      "track_color": "#f75e61",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503110,
+      "name": "Bača",
+      "start_number": 6,
+      "description": "Michal Bača - SRS Sailing team + Krnov YK - PLEIADES",
+      "track_color": "#e377c3",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503111,
+      "name": "Slížek",
+      "start_number": 7,
+      "description": "Martin Slížek - YC Lipence - MH56",
+      "track_color": "#ba4a7b",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503112,
+      "name": "Kuchyňka",
+      "start_number": 8,
+      "description": "Vojtěch Kuchyňka - Přímé kurzy - MH53",
+      "track_color": "#4f4f22",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503113,
+      "name": "Zvěřina",
+      "start_number": 9,
+      "description": "Martin Zvěřina - ALBEDO",
+      "track_color": "#32678a",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503114,
+      "name": "Květoň",
+      "start_number": 10,
+      "description": "Jiří Květoň - IO",
+      "track_color": "#daa520",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503115,
+      "name": "Korbel",
+      "start_number": 11,
+      "description": "Evžen Korbel - NEBULA",
+      "track_color": "#7cfc00",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503116,
+      "name": "Konupčík",
+      "start_number": 12,
+      "description": "Michal Konupčík - SK Halza - MH48",
+      "track_color": "#a3a350",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503117,
+      "name": "Kolín",
+      "start_number": 13,
+      "description": "Robert Kolín - METIS",
+      "track_color": "#cc10a3",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503118,
+      "name": "Piskacis",
+      "start_number": 14,
+      "description": "Ladislav Piskacis - Yacht team Modrý jelen - MILKY WAY",
+      "track_color": "#ff7f0e",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503119,
+      "name": "Poledňák",
+      "start_number": 15,
+      "description": "Radim Poledňák - Kolotočári 2 - KORE",
+      "track_color": "#c5b0d5",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503120,
+      "name": "Löwit",
+      "start_number": 16,
+      "description": "Harry Löwit - YC Císařská louka + JUSTICE sailing team - MH49",
+      "track_color": "#008b8b",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503121,
+      "name": "Horák",
+      "start_number": 17,
+      "description": "Pavel Horák - Kunratický Go & Yacht Club - MH77",
+      "track_color": "#1c676e",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503122,
+      "name": "Dybal",
+      "start_number": 18,
+      "description": "Zdeněk Dybal - PPK - MH55",
+      "track_color": "#8ba353",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503123,
+      "name": "Pokorný",
+      "start_number": 19,
+      "description": "Jan Pokorný - MH51",
+      "track_color": "#ffd700",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503124,
+      "name": "Marosi",
+      "start_number": 20,
+      "description": "Attila Marosi - Kolotočári 4 - ELARA",
+      "track_color": "#3e1273",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503125,
+      "name": "Guryča",
+      "start_number": 21,
+      "description": "Daniel Guryča - YACHT - DIA",
+      "track_color": "#6d8a1c",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503126,
+      "name": "David",
+      "start_number": 22,
+      "description": "Radek David - MH84",
+      "track_color": "#0050e9",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503127,
+      "name": "Faktor",
+      "start_number": 23,
+      "description": "Vlastimil Faktor - GENeRACE SAILING TEAM - TITAN",
+      "track_color": "#3d633e",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503128,
+      "name": "Štrobl",
+      "start_number": 24,
+      "description": "Stanislav Štrobl - BLACK TOT SAILING - MH47",
+      "track_color": "#703329",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503129,
+      "name": "Froněk",
+      "start_number": 25,
+      "description": "Petr Froněk - MH54",
+      "track_color": "#FFFFFF",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503130,
+      "name": "Bělehrad",
+      "start_number": 26,
+      "description": "Pavel Bělehrad - CALISTO",
+      "track_color": "#024d02",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503131,
+      "name": "Fedorík",
+      "start_number": 27,
+      "description": "Vladimír Fedorík - MH82",
+      "track_color": "#678cab",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503132,
+      "name": "Mencl",
+      "start_number": 28,
+      "description": "Jan Mencl - Sudeťáci - MH78",
+      "track_color": "#556071",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503133,
+      "name": "Straka",
+      "start_number": 29,
+      "description": "Tomáš Straka - Doktor Bumbu - MH86",
+      "track_color": "#000000",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503134,
+      "name": "Windisch",
+      "start_number": 30,
+      "description": "Martin Windisch - MIMAS",
+      "track_color": "#772e35",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503135,
+      "name": "Kunt",
+      "start_number": 31,
+      "description": "Vladimír Kunt - Seamen & Swallows - MH50",
+      "track_color": "#522cab",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503136,
+      "name": "Satková",
+      "start_number": 32,
+      "description": "Ivana Satková - Gale Force One - MH52",
+      "track_color": "#e371e3",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503137,
+      "name": "Vistr",
+      "start_number": 33,
+      "description": "Tomas Vistr - RHEA",
+      "track_color": "#348a36",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503139,
+      "name": "Mach",
+      "start_number": 35,
+      "description": "Jiří Mach - CERES",
+      "track_color": "#bcffa8",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503140,
+      "name": "Neuwirth",
+      "start_number": 36,
+      "description": "Radim Neuwirth - ENGINE WIND sailing team - ANUS",
+      "track_color": "#bfa654",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503141,
+      "name": "Erban",
+      "start_number": 37,
+      "description": "Zdeněk Erban - Elen sailing team - NABU",
+      "track_color": "#ab57ab",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503142,
+      "name": "Pospíšil",
+      "start_number": 38,
+      "description": "Martin Pospíšil - KETU",
+      "track_color": "#308575",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503143,
+      "name": "Hlavička",
+      "start_number": 39,
+      "description": "Jan Hlavička - MH80",
+      "track_color": "#8fc165",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503144,
+      "name": "Koláčný",
+      "start_number": 40,
+      "description": "Rudolf Koláčný - MH81",
+      "track_color": "#2faf5f",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": true
+    },
+    {
+      "id": 201503145,
+      "name": "Hrubý",
+      "start_number": 41,
+      "description": "Erik Hrubý - SESTRICA",
+      "track_color": "#123456",
+      "track_length": 10800,
+      "race_committee": false,
+      "foto": "",
+      "boat_data": false
+    },
+    {
+      "id": 201503150,
+      "name": "VR1",
+      "start_number": 44,
+      "description": null,
+      "track_color": "#FF0000",
+      "track_length": 300,
+      "race_committee": true,
+      "foto": "https://www.velikonocniregata.cz/Content/Images/Race/cc9f2eca386041c88bb56d116993e360.jpg",
+      "boat_data": false
+    },
+    {
+      "id": 201503151,
+      "name": "VR2",
+      "start_number": 45,
+      "description": null,
+      "track_color": "#FF0000",
+      "track_length": 300,
+      "race_committee": true,
+      "foto": "https://www.velikonocniregata.cz/Content/Images/Race/cc9f2eca386041c88bb56d116993e360.jpg",
+      "boat_data": false
+    },
+    {
+      "id": 201503152,
+      "name": "VR3",
+      "start_number": 46,
+      "description": null,
+      "track_color": "#000000",
+      "track_length": 300,
+      "race_committee": true,
+      "foto": "https://www.velikonocniregata.cz/Content/Images/Race/cc9f2eca386041c88bb56d116993e360.jpg",
+      "boat_data": false
+    }
+  ],
+  "cc_event_leg": [
+    {
+      "id": 20151424,
+      "name": "VR 2026 - Etapa 1",
+      "active": 1,
+      "start": "2026-03-29T10:00:00+02:00",
+      "end": "2026-03-30T23:00:00+02:00",
+      "race_type": "offshore"
+    },
+    {
+      "id": 20151425,
+      "name": "VR 2026 - Etapa 2",
+      "active": 1,
+      "start": "2026-04-02T08:00:00+02:00",
+      "end": "2026-04-02T22:35:00+02:00",
+      "race_type": "offshore"
+    }
+  ],
+  "banner_set_live": {
+    "banners": [
+      {
+        "id": 12,
+        "time": null,
+        "link": "http://www.ifp-publishing.cz",
+        "img": "/media_root/banners/ifp.jpg",
+        "name": "IFP"
+      },
+      {
+        "id": 66,
+        "time": null,
+        "link": "https://joinly.live",
+        "img": "/media_root/banners/joinly-wide.png",
+        "name": "Joinly"
+      },
+      {
+        "id": 43,
+        "time": null,
+        "link": "https://www.artmaster.com/",
+        "img": "/media_root/banners/artmaster-cb.png",
+        "name": "6 Art Master"
+      },
+      {
+        "id": 75,
+        "time": null,
+        "link": "https://www.optiscont.cz/blog/co-je-u-nas-noveho/velikonocni-regata-2026.html",
+        "img": "/media_root/banners/oiptiscont.jpeg",
+        "name": "Optiscont"
+      },
+      {
+        "id": 7,
+        "time": null,
+        "link": "http://www.yacht-magazine.cz",
+        "img": "/media_root/banners/Yacht_logo_nov%C3%A9.jpg",
+        "name": "Yacht Magazine"
+      },
+      {
+        "id": 40,
+        "time": null,
+        "link": "https://www.lanexeshop.cz/",
+        "img": "/media_root/banners/lanex_yachting_QtOMjtf.png",
+        "name": "LANEX"
+      },
+      {
+        "id": 50,
+        "time": null,
+        "link": "https://www.khdkelectronics.com/",
+        "img": "/media_root/banners/khdk.png",
+        "name": "KHDK"
+      },
+      {
+        "id": 3,
+        "time": null,
+        "link": "http://www.adc.cz/",
+        "img": "/media_root/banners/adc.jpg",
+        "name": "1 ADC"
+      },
+      {
+        "id": 59,
+        "time": null,
+        "link": "https://unetickypivovar.cz/",
+        "img": "/media_root/banners/unetickypivovar.png",
+        "name": "Uneticky Pivovar"
+      },
+      {
+        "id": 63,
+        "time": null,
+        "link": "https://www.besednirestaurace.cz/",
+        "img": "/media_root/banners/u_ritschelu_100x100px.jpg",
+        "name": "Besedni restaurace"
+      },
+      {
+        "id": 9,
+        "time": null,
+        "link": "http://www.bandzone.cz",
+        "img": "/media_root/banners/bandzone.png",
+        "name": "3 Bandzone"
+      },
+      {
+        "id": 1,
+        "time": null,
+        "link": "http://www.adcnet.cz/",
+        "img": "/media_root/banners/adcnet.png",
+        "name": "2 ADCnet.cz"
+      },
+      {
+        "id": 73,
+        "time": null,
+        "link": "https://www.bytypalacak.cz/",
+        "img": "/media_root/banners/chmel_palacak_350x150_2x_v2.jpg",
+        "name": "CHMEL Palacak"
+      },
+      {
+        "id": 72,
+        "time": null,
+        "link": "https://yachthub.cz/",
+        "img": "/media_root/banners/yachthub.png",
+        "name": "Yacht Hub"
+      },
+      {
+        "id": 76,
+        "time": null,
+        "link": "https://www.boxxi.cz/",
+        "img": "/media_root/banners/boxxi.jpeg",
+        "name": "Boxxi"
+      },
+      {
+        "id": 69,
+        "time": null,
+        "link": "https://sailgrail.cz/",
+        "img": "/media_root/banners/sailgrail.png",
+        "name": "SailGrail"
+      },
+      {
+        "id": 11,
+        "time": null,
+        "link": "http://www.hellyhansen.com",
+        "img": "/media_root/banners/hh_Tbc8Lw2.jpg",
+        "name": "HH"
+      },
+      {
+        "id": 60,
+        "time": null,
+        "link": "https://www.expresmenu.com/",
+        "img": "/media_root/banners/expresmenu_CpH36qN.jpg",
+        "name": "Expres Menu"
+      },
+      {
+        "id": 38,
+        "time": null,
+        "link": "http://www.lodninoviny.cz",
+        "img": "/media_root/banners/lodninoviny.jpg",
+        "name": "5 Lodní noviny"
+      },
+      {
+        "id": 10,
+        "time": null,
+        "link": "http://www.cfix.cz",
+        "img": "/media_root/banners/cfix.jpg",
+        "name": "CFIX"
+      },
+      {
+        "id": 74,
+        "time": null,
+        "link": "https://www.apartmanycelnicelipno.cz/",
+        "img": "/media_root/banners/celnice_350x150_2x_v3_N3PayIl.jpg",
+        "name": "Fin2Be Celnice"
+      },
+      {
+        "id": 71,
+        "time": null,
+        "link": "https://www.gensedlcany.cz/",
+        "img": "/media_root/banners/gen-new.PNG",
+        "name": "GEN Sedlcany"
+      },
+      {
+        "id": 2,
+        "time": null,
+        "link": "http://www.yachtservice.cz/",
+        "img": "/media_root/banners/yachtservice.png",
+        "name": "4 Straka yacht"
+      },
+      {
+        "id": 67,
+        "time": null,
+        "link": "http://www.navodniskutr.cz",
+        "img": "/media_root/banners/skutry.jpg",
+        "name": "SKUTRY"
+      },
+      {
+        "id": 70,
+        "time": null,
+        "link": "https://www.zsdynin.cz/",
+        "img": "/media_root/banners/ZSD_Ldo3oQE.png",
+        "name": "ZSD"
+      }
+    ]
+  },
+  "banner_set_replay": {
+    "banners": [
+      {
+        "id": 38,
+        "time": null,
+        "link": "http://www.lodninoviny.cz",
+        "img": "/media_root/banners/lodninoviny.jpg",
+        "name": "5 Lodní noviny"
+      },
+      {
+        "id": 3,
+        "time": null,
+        "link": "http://www.adc.cz/",
+        "img": "/media_root/banners/adc.jpg",
+        "name": "1 ADC"
+      },
+      {
+        "id": 50,
+        "time": null,
+        "link": "https://www.khdkelectronics.com/",
+        "img": "/media_root/banners/khdk.png",
+        "name": "KHDK"
+      },
+      {
+        "id": 43,
+        "time": null,
+        "link": "https://www.artmaster.com/",
+        "img": "/media_root/banners/artmaster-cb.png",
+        "name": "6 Art Master"
+      },
+      {
+        "id": 67,
+        "time": null,
+        "link": "http://www.navodniskutr.cz",
+        "img": "/media_root/banners/skutry.jpg",
+        "name": "SKUTRY"
+      },
+      {
+        "id": 2,
+        "time": null,
+        "link": "http://www.yachtservice.cz/",
+        "img": "/media_root/banners/yachtservice.png",
+        "name": "4 Straka yacht"
+      },
+      {
+        "id": 9,
+        "time": null,
+        "link": "http://www.bandzone.cz",
+        "img": "/media_root/banners/bandzone.png",
+        "name": "3 Bandzone"
+      },
+      {
+        "id": 6,
+        "time": null,
+        "link": "http://www.yachtclub.cz",
+        "img": "/media_root/banners/ycp.png",
+        "name": "YCP"
+      }
+    ]
+  },
+  "boat_data_off": false
+}

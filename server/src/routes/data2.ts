@@ -1,56 +1,22 @@
 import { Router } from "express";
 import Database from "better-sqlite3";
 import { resolve } from "node:path";
-
-interface DataPoint {
-  time: number;
-  coords: [number, number];
-  hdg?: number;
-  cog?: number;
-  sog?: number;
-  tws?: number;
-  twa?: number;
-  aws?: number;
-  awa?: number;
-  stw?: number;
-  [key: string]: unknown;
-}
-
-interface SlimPoint {
-  time: number;
-  coords: [number, number];
-  hdg?: number;
-  cog?: number;
-  sog?: number;
-  tws?: number;
-  twa?: number;
-  aws?: number;
-  awa?: number;
-  stw?: number;
-}
-
-function slim(p: DataPoint): SlimPoint {
-  return {
-    time: p.time,
-    coords: p.coords,
-    hdg: p.hdg,
-    cog: p.cog,
-    sog: p.sog,
-    tws: p.tws,
-    twa: p.twa,
-    aws: p.aws,
-    awa: p.awa,
-    stw: p.stw,
-  };
-}
+import { upstream, type DataHour, type SlimPoint } from "../upstream/index.js";
+import { floorHour } from "../time.js";
+import * as clock from "../clock.js";
 
 interface CacheChunk {
-  objects: Record<string, DataPoint[]>;
+  objects: DataHour;
   fetchedAt: number;
+  /** The hour had fully elapsed (race time) when fetched, so the data can't change. */
+  complete: boolean;
 }
 
 // --- SQLite persistence ---
-const dbPath = resolve(process.env.CACHE_DB_PATH ?? resolve(__dirname, "../../cache.db"));
+// Replay serves fixtures; keep its chunks out of the real on-disk cache
+const dbPath = clock.replay
+  ? ":memory:"
+  : resolve(process.env.CACHE_DB_PATH ?? resolve(__dirname, "../../cache.db"));
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 db.exec(`
@@ -78,12 +44,14 @@ function loadFromDb() {
 
   let count = 0;
   for (const row of rows) {
-    const eid = row.event_id;
-    const key = `${eid}:${row.hour_start}`;
+    // Older versions persisted hours fetched before they ended; ignore those
+    if (row.fetched_at < (row.hour_start + 3600) * 1000) continue;
+    const key = `${row.event_id}:${row.hour_start}`;
     if (!memCache.has(key)) {
       memCache.set(key, {
         objects: JSON.parse(row.data),
         fetchedAt: row.fetched_at,
+        complete: true,
       });
       count++;
     }
@@ -94,10 +62,6 @@ function loadFromDb() {
 // Load everything on startup
 loadFromDb();
 
-function floorHour(unixSeconds: number): number {
-  return Math.floor(unixSeconds / 3600) * 3600;
-}
-
 async function fetchChunk(
   eventId: string,
   hourStart: number,
@@ -105,37 +69,21 @@ async function fetchChunk(
   const key = `${eventId}:${hourStart}`;
   const existing = memCache.get(key);
   const now = Date.now();
-  const isCurrentHour = floorHour(now / 1000) === hourStart;
 
-  if (existing && (!isCurrentHour || now - existing.fetchedAt < CURRENT_CHUNK_TTL_MS)) {
+  if (existing && (existing.complete || now - existing.fetchedAt < CURRENT_CHUNK_TTL_MS)) {
     return existing;
   }
 
-  const start = new Date(hourStart * 1000).toISOString().replace("T", " ").slice(0, 19);
-  const end = new Date((hourStart + 3600) * 1000).toISOString().replace("T", " ").slice(0, 19);
-  const url = `https://app.seesea.cz/api/cc_event/${eventId}/data2/?gps_datetime_0=${encodeURIComponent(start)}&gps_datetime_1=${encodeURIComponent(end)}&page_size=1000000&detailed=1`;
+  const complete = hourStart + 3600 <= clock.nowSeconds();
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) return existing ?? null;
-    const data = await response.json();
-    const objects = data.objects ?? {};
-
-    // Slim the data before storing to save space
-    const slimmed: Record<string, SlimPoint[]> = {};
-    for (const [vesselId, points] of Object.entries(objects) as [string, DataPoint[]][]) {
-      slimmed[vesselId] = points.map(slim);
-    }
-
-    const chunk: CacheChunk = {
-      objects: slimmed as Record<string, DataPoint[]>,
-      fetchedAt: now,
-    };
+    const objects = await upstream.getDataHour(eventId, hourStart);
+    const chunk: CacheChunk = { objects, fetchedAt: now, complete };
     memCache.set(key, chunk);
 
-    // Persist historical chunks to SQLite (not the current hour — it changes)
-    if (!isCurrentHour) {
-      stmtUpsert.run(eventId, hourStart, JSON.stringify(slimmed), now);
+    // Only finished hours are persisted — current and future hours still change
+    if (complete) {
+      stmtUpsert.run(eventId, hourStart, JSON.stringify(objects), now);
     }
 
     return chunk;
@@ -145,7 +93,7 @@ async function fetchChunk(
 }
 
 async function warmCache(eventId: string, fromTime: number) {
-  const nowSeconds = Math.floor(Date.now() / 1000);
+  const nowSeconds = clock.nowSeconds();
   const firstHour = floorHour(fromTime);
   const lastHour = floorHour(nowSeconds);
 

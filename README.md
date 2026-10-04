@@ -78,3 +78,24 @@ The application consumes GPS track data with the following structure:
 ## License
 
 MIT
+## Dev data & replay
+
+The API server can replay a recorded event as if it were live, with no network access to SeeSea or Open-Meteo. Leg 2 of VR 2026 is committed in `server/fixtures/vr-2026/`.
+
+Enable it in `.env` (the Conductor run script exports it to the server; when starting the server by hand, pass the variables yourself, e.g. `env REPLAY=vr-2026 npm --prefix server run dev`):
+
+```
+REPLAY=vr-2026
+REPLAY_SPEED=10                         # optional, default 1
+REPLAY_START=2026-04-02T12:00:00+02:00  # optional, default 30 min into the first recorded leg
+```
+
+The race clock starts at `REPLAY_START`, runs at `REPLAY_SPEED`× and stops at the end of the last recorded leg. Live positions, tails and wind are rebuilt from the recording for that time, and the UI shows a `REPLAY` badge. Restart the server to change settings.
+
+To record another event (stored in `server/fixtures/<slug>/`, gitignored except `vr-2026`):
+
+```bash
+npm --prefix server run record -- <slug> [--legs <legId,legId>]
+```
+
+Event slugs and leg ids are listed at `https://app.seesea.cz/api/cc_event/`. Re-running resumes and skips data already recorded.
