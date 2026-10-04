@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { getReplay } from "../utils/clock";
 
 export interface Crew {
   id: number;
@@ -32,11 +31,16 @@ interface EventConfigBase {
 }
 
 interface EventConfig extends EventConfigBase {
+  slug: string;
+  /** [lng, lat] the map opens at. */
+  center: [number, number] | null;
   highlightedCrews: Set<number>;
   toggleHighlight: (crewId: number) => void;
 }
 
 export const EventConfigContext = createContext<EventConfig>({
+  slug: "",
+  center: null,
   eventId: null,
   crews: [],
   legs: [],
@@ -48,7 +52,7 @@ export const EventConfigContext = createContext<EventConfig>({
 
 export const useEventConfig = () => useContext(EventConfigContext);
 
-export function useEventConfigLoader(): EventConfigBase {
+export function useEventConfigLoader(slug: string): EventConfigBase {
   const [config, setConfig] = useState<EventConfigBase>({
     eventId: null,
     crews: [],
@@ -58,9 +62,6 @@ export function useEventConfigLoader(): EventConfigBase {
   });
 
   useEffect(() => {
-    // In replay the server only knows the recorded event
-    const slug = getReplay()?.slug || import.meta.env.VITE_EVENT_SLUG || "vr-2026";
-
     fetch(`/api/event/${slug}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -82,7 +83,7 @@ export function useEventConfigLoader(): EventConfigBase {
           error: err.message,
         }));
       });
-  }, []);
+  }, [slug]);
 
   return config;
 }
