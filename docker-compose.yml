@@ -5,12 +5,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
     ports:
       - "5173:5173"
-    environment:
-      - NODE_ENV=development
-      - VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
-      - API_TARGET=http://server:3001
+    depends_on:
+      - server
 
   server:
     build:
