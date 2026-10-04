@@ -38,6 +38,26 @@ export function useVesselMarkers(
   historyTimelinesRef.current = historyTimelines;
   const isHistoryModeRef = useRef(isHistoryMode);
   isHistoryModeRef.current = isHistoryMode;
+  /** Last position handed to each marker, to skip sub-pixel moves. */
+  const lastPosRef = useRef<Record<string, [number, number]>>({});
+
+  /**
+   * Every setLngLat makes Mapbox check that all sources are loaded, which with
+   * one trail source per boat is expensive at 60 fps. Skip moves of less than
+   * half a pixel at the current zoom — boats usually move ~1 px per 25 s.
+   */
+  const moveMarker = (id: string, marker: mapboxgl.Marker, pos: [number, number], minLngDeg: number) => {
+    const last = lastPosRef.current[id];
+    if (
+      last &&
+      Math.abs(pos[0] - last[0]) < minLngDeg &&
+      Math.abs(pos[1] - last[1]) < minLngDeg * Math.cos((pos[1] * Math.PI) / 180)
+    ) {
+      return;
+    }
+    marker.setLngLat(pos);
+    lastPosRef.current[id] = pos;
+  };
 
   // Snapshot vessel data with receive timestamp for interpolation
   useEffect(() => {
@@ -51,6 +71,8 @@ export function useVesselMarkers(
     if (!mapLoaded) return;
     let raf = 0;
     const tick = () => {
+      // Half a pixel in degrees of longitude (512 px Mercator world at zoom 0)
+      const minLngDeg = map.current ? 0.5 * (360 / (512 * 2 ** map.current.getZoom())) : 0;
       if (isHistoryModeRef.current && simTimeRef) {
         // History mode: interpolate between timeline data points
         const t = simTimeRef.current;
@@ -82,9 +104,9 @@ export function useVesselMarkers(
               const frac = (t - a.time) / (b.time - a.time);
               const lng = a.coords[0] + (b.coords[0] - a.coords[0]) * frac;
               const lat = a.coords[1] + (b.coords[1] - a.coords[1]) * frac;
-              marker.setLngLat([lng, lat]);
+              moveMarker(id, marker, [lng, lat], minLngDeg);
             } else {
-              marker.setLngLat(a.coords as [number, number]);
+              moveMarker(id, marker, a.coords as [number, number], minLngDeg);
             }
           }
         }
@@ -101,7 +123,7 @@ export function useVesselMarkers(
             const sog = vessel.sog || 0;
             if (sog > 0 && cog) {
               const pos = futurePosition(vessel.coords, sog, cog, elapsedMin);
-              marker.setLngLat(pos);
+              moveMarker(id, marker, pos, minLngDeg);
             }
           }
         }
@@ -137,6 +159,7 @@ export function useVesselMarkers(
       if (markersRef.current[vesselId]) {
         const marker = markersRef.current[vesselId];
         marker.setLngLat(data.coords as [number, number]);
+        lastPosRef.current[vesselId] = data.coords as [number, number];
         const rotation = data.hdg || data.cog || 0;
         const el = marker.getElement();
         if (!rootsRef.current[vesselId]) {
@@ -192,6 +215,7 @@ export function useVesselMarkers(
           .setLngLat(data.coords as [number, number])
           .addTo(map.current!);
         markersRef.current[vesselId] = marker;
+        lastPosRef.current[vesselId] = data.coords as [number, number];
       }
     });
 
@@ -212,6 +236,7 @@ export function useVesselMarkers(
         markersRef.current[id].remove();
         delete rootsRef.current[id];
         delete markersRef.current[id];
+        delete lastPosRef.current[id];
       }
     });
 
