@@ -26,6 +26,11 @@ export interface RawEventLeg {
 export interface RawEvent {
   cc_event_id: number;
   slug: string;
+  name?: string;
+  event_start?: string;
+  event_end?: string;
+  default_lat?: number;
+  default_lng?: number;
   cc_object?: unknown[];
   cc_event_leg?: RawEventLeg[];
   [key: string]: unknown;
