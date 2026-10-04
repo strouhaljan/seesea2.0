@@ -56,7 +56,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const { crews, highlightedCrews } = useEventConfig();
+  const { crews, highlightedCrews, center } = useEventConfig();
 
   const controls = useMapControls();
 
@@ -86,7 +86,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: MAP_STYLES[getSavedTheme()],
-      center: DEFAULT_CENTER,
+      center: center ?? DEFAULT_CENTER,
       zoom: getSavedZoom(),
       dragRotate: false,
       pitchWithRotate: false,
