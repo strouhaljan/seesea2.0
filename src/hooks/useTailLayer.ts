@@ -1,15 +1,22 @@
-import { useEffect, useRef, MutableRefObject } from "react";
+import { useEffect, MutableRefObject } from "react";
 import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
 import { TailsData } from "./useTails";
 import { Crew } from "./useEventConfig";
 import { ColorMode } from "../types/map";
-import { getColorBySpeed } from "../utils/wind";
+import { WIND_SPEED_COLORS } from "../utils/wind";
 import { now as raceNow } from "../utils/clock";
 
 const TAIL_LINE_SOURCE = "tail-lines";
 const TAIL_LINE_LAYER = "tail-lines-layer";
-const WIND_PREFIX = "tail-wind-";
-const WIND_LAYER_PREFIX = "tail-wind-layer-";
+
+/** Same scale as getColorBySpeed, evaluated by Mapbox per segment. */
+const WIND_COLOR: mapboxgl.Expression = [
+  "case",
+  ["has", "tws"],
+  ["interpolate", ["linear"], ["get", "tws"], ...WIND_SPEED_COLORS.flatMap((s) => [s.threshold, s.color])],
+  ["get", "color"], // vessel without wind data: crew colour, as before
+];
+const CREW_COLOR: mapboxgl.Expression = ["get", "color"];
 
 interface UseTailLayerOptions {
   tails: TailsData;
@@ -21,20 +28,24 @@ interface UseTailLayerOptions {
   colorMode: ColorMode;
 }
 
+/**
+ * All trails live in one source/layer, split into one segment per pair of
+ * consecutive points so each segment can carry its own wind speed. A source
+ * per boat (needed for line-gradient) made every update and every marker move
+ * scale with the number of boats.
+ */
 export function useTailLayer(
   map: MutableRefObject<MapboxMap | null>,
   mapLoaded: boolean,
   options: UseTailLayerOptions,
 ) {
   const { tails, trailMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted, colorMode } = options;
-  const activeWindIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
     const m = map.current;
 
-    const tailFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-    const nextWindIds = new Set<string>();
+    const features: GeoJSON.Feature<GeoJSON.LineString>[] = [];
 
     if (trailMinutes > 0 && Object.keys(tails).length > 0) {
       const cutoff = isHistoryMode ? 0 : raceNow() / 1000 - trailMinutes * 60;
@@ -47,96 +58,37 @@ export function useTailLayer(
         if (filtered.length < 2) return;
 
         const crew = crews.find((c) => c.id === parseInt(vesselId));
-        const crewColor = crew?.track_color || "#888";
+        const color = crew?.track_color || "#888";
+        const hasWindData = filtered.some((p) => p[3] !== undefined);
 
-        const useWindColors = colorMode === "wind";
-        const hasWindData = useWindColors && filtered.some((p) => p[3] !== undefined);
-
-        if (hasWindData) {
-          // Per-vessel source+layer with line-gradient for a true smooth gradient
-          const sourceId = WIND_PREFIX + vesselId;
-          const layerId = WIND_LAYER_PREFIX + vesselId;
-          nextWindIds.add(vesselId);
-
-          const coords: [number, number][] = filtered.map((p) => [p[1], p[2]]);
-          const geojson: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
-            type: "FeatureCollection",
-            features: [{
-              type: "Feature",
-              properties: {},
-              geometry: { type: "LineString", coordinates: coords },
-            }],
-          };
-
-          // Build gradient stops: [progress, color, progress, color, ...]
-          const gradientStops: (number | string)[] = [];
-          for (let i = 0; i < filtered.length; i++) {
-            const progress = filtered.length > 1 ? i / (filtered.length - 1) : 0;
-            gradientStops.push(progress, getColorBySpeed(filtered[i][3]));
-          }
-
-          const existingSource = m.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined;
-          if (existingSource) {
-            existingSource.setData(geojson);
-            m.setPaintProperty(layerId, "line-gradient", [
-              "interpolate", ["linear"], ["line-progress"],
-              ...gradientStops,
-            ]);
-          } else {
-            m.addSource(sourceId, { type: "geojson", data: geojson, lineMetrics: true });
-            m.addLayer({
-              id: layerId,
-              type: "line",
-              source: sourceId,
-              paint: {
-                "line-gradient": [
-                  "interpolate", ["linear"], ["line-progress"],
-                  ...gradientStops,
-                ],
-                "line-width": 2,
-                "line-opacity": 0.7,
-              },
-            });
-          }
-        } else {
-          // Single LineString with crew color
-          const coords: [number, number][] = filtered.map((p) => [p[1], p[2]]);
-          tailFeatures.push({
+        for (let i = 0; i < filtered.length - 1; i++) {
+          const a = filtered[i];
+          const b = filtered[i + 1];
+          features.push({
             type: "Feature",
-            properties: { color: crewColor },
-            geometry: { type: "LineString", coordinates: coords },
+            // Missing readings count as 0 kn, like getColorBySpeed(undefined)
+            properties: hasWindData ? { color, tws: ((a[3] ?? 0) + (b[3] ?? 0)) / 2 } : { color },
+            geometry: { type: "LineString", coordinates: [[a[1], a[2]], [b[1], b[2]]] },
           });
         }
       });
     }
 
-    // Remove wind sources/layers for vessels no longer shown
-    for (const oldId of activeWindIds.current) {
-      if (!nextWindIds.has(oldId)) {
-        const layerId = WIND_LAYER_PREFIX + oldId;
-        const sourceId = WIND_PREFIX + oldId;
-        if (m.getLayer(layerId)) m.removeLayer(layerId);
-        if (m.getSource(sourceId)) m.removeSource(sourceId);
-      }
-    }
-    activeWindIds.current = nextWindIds;
+    const data: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: "FeatureCollection", features };
+    const lineColor = colorMode === "wind" ? WIND_COLOR : CREW_COLOR;
 
-    // Update the shared source/layer for non-wind trails
-    const tailGeojson: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
-      type: "FeatureCollection",
-      features: tailFeatures,
-    };
     const existingSource = m.getSource(TAIL_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
     if (existingSource) {
-      existingSource.setData(tailGeojson);
+      existingSource.setData(data);
+      m.setPaintProperty(TAIL_LINE_LAYER, "line-color", lineColor);
     } else {
-      m.addSource(TAIL_LINE_SOURCE, { type: "geojson", data: tailGeojson });
+      m.addSource(TAIL_LINE_SOURCE, { type: "geojson", data });
       m.addLayer({
         id: TAIL_LINE_LAYER,
         type: "line",
         source: TAIL_LINE_SOURCE,
         paint: {
-          "line-color": ["get", "color"],
+          "line-color": lineColor,
           "line-width": 2,
           "line-opacity": 0.7,
         },
