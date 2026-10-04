@@ -208,7 +208,9 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
         </div>
       )}
 
-      {loading && Object.keys(liveData).length === 0 && (
+      {/* Only until the first poll answers: an event without live boats keeps liveData
+          empty, and showing this on every poll made the whole layout flicker */}
+      {loading && !lastUpdated && Object.keys(liveData).length === 0 && (
         <div className="loading">Loading live data...</div>
       )}
 
