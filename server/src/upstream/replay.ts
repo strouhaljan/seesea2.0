@@ -45,6 +45,21 @@ export class ReplayUpstream implements Upstream {
   constructor(slug: string) {
     this.fixture = loadFixture(slug);
     this.paths = fixturePaths(slug);
+    this.warnMissingHours();
+  }
+
+  /** Hours inside recorded legs without a history file replay as gaps — say so up front. */
+  private warnMissingHours() {
+    const missing: number[] = [];
+    for (const leg of this.fixture.legs) {
+      for (let h = floorHour(toSeconds(leg.start)); h <= floorHour(toSeconds(leg.end)); h += 3600) {
+        if (!existsSync(this.paths.dataHour(h))) missing.push(h);
+      }
+    }
+    if (missing.length > 0) {
+      const hours = missing.map((h) => new Date(h * 1000).toISOString().slice(0, 13) + ":00Z");
+      console.warn(`Replay fixture is missing ${missing.length} history hour(s), shown as gaps: ${hours.join(", ")}. Re-run the recorder to fill them.`);
+    }
   }
 
   async getEvent(slug: string): Promise<RawEvent> {

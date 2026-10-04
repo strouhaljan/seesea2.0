@@ -22,7 +22,7 @@ function initReplay(slug: string) {
   const speed = Number(process.env.REPLAY_SPEED ?? "1");
 
   if (Number.isNaN(start)) throw new Error(`Invalid REPLAY_START: ${process.env.REPLAY_START}`);
-  if (!(speed > 0)) throw new Error(`Invalid REPLAY_SPEED: ${process.env.REPLAY_SPEED}`);
+  if (!Number.isFinite(speed) || speed <= 0) throw new Error(`Invalid REPLAY_SPEED: ${process.env.REPLAY_SPEED}`);
 
   return { slug, start, end, speed, legIds: legs.map((l) => l.id) };
 }

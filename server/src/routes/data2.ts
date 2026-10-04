@@ -36,7 +36,8 @@ const stmtDeleteOlderThan = db.prepare("DELETE FROM chunks WHERE fetched_at < ?"
 
 // --- In-memory cache (fast path) ---
 const memCache = new Map<string, CacheChunk>();
-const CURRENT_CHUNK_TTL_MS = 60_000;
+// A minute of race time: in replay at ×N the current hour grows N× faster
+const CURRENT_CHUNK_TTL_MS = 60_000 / (clock.replay?.speed ?? 1);
 
 // Load all existing chunks from SQLite into memory on startup
 function loadFromDb() {

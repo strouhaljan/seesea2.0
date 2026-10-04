@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { gunzipSync, gzipSync } from "node:zlib";
 import type { RawEvent, RawEventLeg, WindModel } from "./types.js";
@@ -24,14 +24,20 @@ export function fixturePaths(slug: string) {
   };
 }
 
-export function writeJson(path: string, data: unknown) {
+/** Write via a temp file and rename, so an interrupted run can't leave a truncated file. */
+function writeAtomic(path: string, contents: string | Buffer) {
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(data, null, 2) + "\n");
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, contents);
+  renameSync(tmp, path);
+}
+
+export function writeJson(path: string, data: unknown) {
+  writeAtomic(path, JSON.stringify(data, null, 2) + "\n");
 }
 
 export function writeGzJson(path: string, data: unknown) {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, gzipSync(JSON.stringify(data), { level: 9 }));
+  writeAtomic(path, gzipSync(JSON.stringify(data), { level: 9 }));
 }
 
 export function readJson<T>(path: string): T {
