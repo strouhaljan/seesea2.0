@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import { etagMiddleware } from "./middleware/etag.js";
 import eventRouter from "./routes/event.js";
 import liveRouter from "./routes/live.js";
@@ -21,6 +22,8 @@ app.use(
   }),
 );
 
+// JSON payloads (tails, history chunks, wind grids) shrink 3–12× gzipped
+app.use(compression());
 app.use(etagMiddleware);
 
 app.use("/api/clock", clockRouter);
