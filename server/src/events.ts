@@ -1,10 +1,20 @@
 import * as clock from "./clock.js";
 import { upstream, type RawEventLeg } from "./upstream/index.js";
 
+/** Offered when nothing is configured — the client's built-in default before EVENTS existed. */
+const DEFAULT_EVENT = "vr-2026";
+
+function configuredSlugs(): string {
+  if (clock.replay) return clock.replay.slug;
+  // VITE_EVENT_SLUG keeps older .env files and deployments working
+  const configured = process.env.EVENTS ?? process.env.EVENT_SLUG ?? process.env.VITE_EVENT_SLUG;
+  if (configured?.trim()) return configured;
+  console.warn(`No EVENTS configured, offering only ${DEFAULT_EVENT}. Set EVENTS=<slug,slug> to choose events.`);
+  return DEFAULT_EVENT;
+}
+
 /** Events offered by this server, in display order. Replay serves only the recorded event. */
-export const EVENT_SLUGS: string[] = (
-  clock.replay ? clock.replay.slug : (process.env.EVENTS ?? process.env.EVENT_SLUG ?? "")
-)
+export const EVENT_SLUGS: string[] = configuredSlugs()
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
