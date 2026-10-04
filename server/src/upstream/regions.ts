@@ -29,7 +29,7 @@ export const REGIONS: WindRegion[] = [
   },
   {
     name: "palagruza", // Open sea from Murter/Šibenik down to Palagruža
-    minLat: 42.3, maxLat: 43.1,
+    minLat: 42.3, maxLat: 43.4,
     minLng: 15.4, maxLng: 16.5,
     latSteps: 8, lngSteps: 12,
   },

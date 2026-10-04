@@ -17,9 +17,11 @@ const SEESEA_API_URL = process.env.SEESEA_API_URL ?? "https://app.seesea.cz/api"
 const OPEN_METEO_URL = process.env.OPEN_METEO_URL ?? "https://api.open-meteo.com/v1";
 const OPEN_METEO_HISTORICAL_URL = "https://historical-forecast-api.open-meteo.com/v1";
 const WIND_VARS = "hourly=wind_speed_10m,wind_direction_10m";
+/** A hanging upstream must not hold requests (and the app shell) open indefinitely. */
+const UPSTREAM_TIMEOUT_MS = 20_000;
 
 async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
   if (!response.ok) {
     throw new UpstreamError(response.status, `Upstream ${response.status} for ${url}`);
   }
