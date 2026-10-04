@@ -10,7 +10,6 @@ services:
     environment:
       - NODE_ENV=development
       - VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
-      - VITE_EVENT_SLUG=${VITE_EVENT_SLUG}
       - API_TARGET=http://server:3001
 
   server:
@@ -24,7 +23,7 @@ services:
     environment:
       - PORT=3001
       - CACHE_DB_PATH=/app/data/cache.db
-      - EVENT_SLUG=${VITE_EVENT_SLUG}
+      - EVENTS=${EVENTS:-vr-2026}
 
 volumes:
   server-data:

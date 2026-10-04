@@ -7,6 +7,10 @@ import { floorHour, sleep } from "../time.js";
 const router = Router();
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
+/** Open-Meteo allows ~600 grid points a minute; both models together exceed that. */
+const MODEL_WARM_GAP_MS = 61_000;
+/** After a failed fetch (e.g. 429) leave Open-Meteo alone for this long. */
+const FAILURE_COOLDOWN_MS = 60_000;
 
 interface CacheEntry {
   data: unknown;
@@ -17,6 +21,7 @@ interface CacheEntry {
 
 const cache = new Map<WindModel, CacheEntry>();
 const inflight = new Map<WindModel, Promise<unknown>>();
+const lastFailure = new Map<WindModel, number>();
 
 async function fetchAllRegions(model: WindModel): Promise<unknown> {
   const regions = [];
@@ -52,14 +57,23 @@ async function getGridData(model: WindModel): Promise<unknown> {
   const existing = inflight.get(model);
   if (existing) return existing;
 
+  // Retrying right after a failure would only feed the rate limit
+  const failedAt = lastFailure.get(model);
+  if (failedAt && Date.now() - failedAt < FAILURE_COOLDOWN_MS) {
+    if (cached) return cached.data;
+    throw new Error(`Wind fetch for ${model} is cooling down after a failure`);
+  }
+
   const promise = fetchAllRegions(model)
     .then((data) => {
       cache.set(model, { data, fetchedAt: Date.now(), hour });
       inflight.delete(model);
+      lastFailure.delete(model);
       return data;
     })
     .catch((err) => {
       inflight.delete(model);
+      lastFailure.set(model, Date.now());
       if (cached) {
         console.warn(`Open-Meteo fetch failed for ${model}, serving stale cache:`, err);
         return cached.data;
@@ -72,7 +86,8 @@ async function getGridData(model: WindModel): Promise<unknown> {
 }
 
 export async function warmWindCache(): Promise<void> {
-  for (const model of WIND_MODELS) {
+  for (const [i, model] of WIND_MODELS.entries()) {
+    if (i > 0 && !clock.replay) await sleep(MODEL_WARM_GAP_MS);
     try {
       await getGridData(model);
       console.log(`Wind cache warmed for ${model}`);

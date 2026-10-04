@@ -78,6 +78,10 @@ The application consumes GPS track data with the following structure:
 ## License
 
 MIT
+## Events
+
+The API server offers the events listed in `EVENTS` (comma-separated SeeSea slugs, e.g. `EVENTS=seawolf-cup-36,palagruza-cup-2026,vr-2026`). The app opens `/e/<slug>`; `/` goes to the first running event, or the first listed one. Users switch events from the header picker. Highlighted boats and the selected leg are remembered per event.
+
 ## Dev data & replay
 
 The API server can replay a recorded event as if it were live, with no network access to SeeSea or Open-Meteo. Leg 2 of VR 2026 is committed in `server/fixtures/vr-2026/`.
@@ -91,6 +95,8 @@ REPLAY_START=2026-04-02T12:00:00+02:00  # optional, default 30 min into the firs
 ```
 
 The race clock starts at `REPLAY_START`, runs at `REPLAY_SPEED`× and stops at the end of the last recorded leg. Live positions, tails and wind are rebuilt from the recording for that time, and the UI shows a `REPLAY` badge. Restart the server to change settings.
+
+In replay the event list is just the replayed event.
 
 To record another event (stored in `server/fixtures/<slug>/`, gitignored except `vr-2026`):
 

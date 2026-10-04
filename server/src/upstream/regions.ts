@@ -27,6 +27,12 @@ export const REGIONS: WindRegion[] = [
     minLng: 15.0, maxLng: 16.5,
     latSteps: 8, lngSteps: 12,
   },
+  {
+    name: "palagruza", // Open sea from Murter/Šibenik down to Palagruža
+    minLat: 42.3, maxLat: 43.1,
+    minLng: 15.4, maxLng: 16.5,
+    latSteps: 8, lngSteps: 12,
+  },
 ];
 
 /** Row-major grid point coordinates as an Open-Meteo `latitude=…&longitude=…` query. */

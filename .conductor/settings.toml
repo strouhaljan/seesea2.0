@@ -19,7 +19,7 @@ set -a; [ -f .env ] && . ./.env; set +a
 API_PORT=$((CONDUCTOR_PORT + 1))
 exec npx concurrently --kill-others --names web,api --prefix-colors cyan,magenta \
   "API_TARGET=http://localhost:$API_PORT npm run dev -- --port $CONDUCTOR_PORT" \
-  "PORT=$API_PORT EVENT_SLUG=${VITE_EVENT_SLUG:-vr-2026} npm --prefix server run dev"
+  "PORT=$API_PORT EVENTS=${EVENTS:-${VITE_EVENT_SLUG:-vr-2026}} npm --prefix server run dev"
 """
 default = true
 icon = "play"

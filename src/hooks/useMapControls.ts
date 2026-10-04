@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { ColorMode } from "../types/map";
 import { getSavedTheme, saveTheme, MapTheme } from "../utils/mapConfig";
 import { WindModel } from "../utils/windGrid";
+import { useEventConfig } from "./useEventConfig";
 
 export function useMapControls() {
+  const { slug } = useEventConfig();
+  const legKey = `selectedLegId:${slug}`;
   const [selectedLegId, setSelectedLegId] = useState<number | null>(
     () => {
-      const saved = localStorage.getItem("selectedLegId");
+      const saved = localStorage.getItem(legKey);
       return saved ? parseInt(saved, 10) : null;
     }
   );
@@ -35,12 +38,12 @@ export function useMapControls() {
 
   useEffect(() => {
     if (selectedLegId !== null) {
-      localStorage.setItem("selectedLegId", String(selectedLegId));
+      localStorage.setItem(legKey, String(selectedLegId));
     } else {
-      localStorage.removeItem("selectedLegId");
+      localStorage.removeItem(legKey);
     }
     window.dispatchEvent(new Event("selectedLegChanged"));
-  }, [selectedLegId]);
+  }, [selectedLegId, legKey]);
   useEffect(() => {
     localStorage.setItem("colorMode", colorMode);
     window.dispatchEvent(new Event("colorModeChanged"));

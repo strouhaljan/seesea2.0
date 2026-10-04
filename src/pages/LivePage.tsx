@@ -37,7 +37,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const { eventId, crews, legs } = useEventConfig();
+  const { eventId, crews, legs, slug } = useEventConfig();
+  const legKey = `selectedLegId:${slug}`;
   const mapRef = useRef<LiveMapHandle>(null);
 
   // Auto-detected active leg (by current time)
@@ -53,20 +54,20 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
 
   // Allow manual leg override from settings
   const selectedLegId = useMemo(() => {
-    const saved = localStorage.getItem("selectedLegId");
+    const saved = localStorage.getItem(legKey);
     return saved ? parseInt(saved, 10) : null;
-  }, []);
+  }, [legKey]);
   const [manualLegId, setManualLegId] = useState<number | null>(selectedLegId);
 
   // Sync with localStorage changes from MapControls
   useEffect(() => {
     const handler = () => {
-      const saved = localStorage.getItem("selectedLegId");
+      const saved = localStorage.getItem(legKey);
       setManualLegId(saved ? parseInt(saved, 10) : null);
     };
     window.addEventListener("selectedLegChanged", handler);
     return () => window.removeEventListener("selectedLegChanged", handler);
-  }, []);
+  }, [legKey]);
 
   const activeLeg = useMemo(() => {
     if (manualLegId !== null) {

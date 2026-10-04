@@ -79,8 +79,42 @@ header {
 header h1 {
   font-size: 1.1rem;
   line-height: 1;
-  text-align: center;
+  white-space: nowrap;
+}
+
+.header__title {
   grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.header__separator {
+  color: var(--panel-text-muted);
+}
+
+.event-picker {
+  min-width: 0;
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: var(--panel-text);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+select.event-picker {
+  cursor: pointer;
+}
+
+select.event-picker option {
+  color: var(--panel-text);
+  background: var(--panel-bg-solid);
 }
 
 .header__panel-toggle {
