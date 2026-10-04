@@ -35,7 +35,7 @@ export function useFutureProjections(
     // Clean up existing future markers
     Object.values(futureMarkersRef.current).forEach((m) => m.remove());
     Object.values(futureRootsRef.current).forEach((r) => {
-      try { r.unmount(); } catch (_) { /* ignore */ }
+      try { r.unmount(); } catch { /* ignore */ }
     });
     futureMarkersRef.current = {};
     futureRootsRef.current = {};
@@ -119,7 +119,7 @@ export function useFutureProjections(
   useEffect(() => {
     return () => {
       Object.values(futureRootsRef.current).forEach((r) => {
-        try { r.unmount(); } catch (_) { /* ignore */ }
+        try { r.unmount(); } catch { /* ignore */ }
       });
     };
   }, []);

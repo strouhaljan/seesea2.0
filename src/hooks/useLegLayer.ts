@@ -1,5 +1,5 @@
 import { useEffect, MutableRefObject } from "react";
-import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
+import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { LegMarker } from "./useLegMarkers";
 
 const LEG_LINE_SOURCE = "leg-lines";
@@ -54,7 +54,7 @@ export function useLegLayer(
     const legLineData: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: legLineFeatures };
     const legPointData: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: legPointFeatures };
 
-    const existingLegLineSource = map.current.getSource(LEG_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+    const existingLegLineSource = map.current.getSource(LEG_LINE_SOURCE) as GeoJSONSource | undefined;
     if (existingLegLineSource) {
       existingLegLineSource.setData(legLineData);
     } else {
@@ -71,7 +71,7 @@ export function useLegLayer(
       });
     }
 
-    const existingLegPointSource = map.current.getSource(LEG_POINT_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+    const existingLegPointSource = map.current.getSource(LEG_POINT_SOURCE) as GeoJSONSource | undefined;
     if (existingLegPointSource) {
       existingLegPointSource.setData(legPointData);
     } else {

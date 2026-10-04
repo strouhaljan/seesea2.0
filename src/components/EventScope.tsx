@@ -8,7 +8,6 @@ interface EventScopeProps {
   panelCollapsed: boolean;
   onTogglePanel: () => void;
   controlsOpen: boolean;
-  onToggleControls: () => void;
 }
 
 /**

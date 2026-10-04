@@ -78,6 +78,13 @@ The application consumes GPS track data with the following structure:
 ## License
 
 MIT
+## Deployment
+
+`docker compose up -d --build` (e.g. as a Portainer stack) runs two containers:
+
+- `app`: the client built with `npm run build` and served by nginx on port 5173, which also proxies `/api` to the server. `VITE_MAPBOX_TOKEN` must be set in the stack environment, since it is baked in at build time.
+- `server`: the API on port 3001, with its SQLite cache in the `server-data` volume. Set `EVENTS` to choose the offered events.
+
 ## Events
 
 The API server offers the events listed in `EVENTS` (comma-separated SeeSea slugs, e.g. `EVENTS=seawolf-cup-36,palagruza-cup-2026,vr-2026`). The app opens `/e/<slug>`; `/` goes to the first running event, or the first listed one. Users switch events from the header picker. Highlighted boats and the selected leg are remembered per event.
