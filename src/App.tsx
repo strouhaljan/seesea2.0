@@ -62,7 +62,6 @@ function App() {
             panelCollapsed={panelCollapsed}
             onTogglePanel={togglePanel}
             controlsOpen={controlsOpen}
-            onToggleControls={toggleControls}
           />
         ) : (
           <div className={eventsError ? "error" : "loading"}>

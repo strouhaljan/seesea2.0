@@ -29,10 +29,9 @@ interface LivePageProps {
   panelCollapsed: boolean;
   onTogglePanel: () => void;
   controlsOpen: boolean;
-  onToggleControls: () => void;
 }
 
-export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggleControls }: LivePageProps) => {
+export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePageProps) => {
   const [liveData, setLiveData] = useState<Record<string, VesselDataPoint>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -242,7 +241,6 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen, onToggle
           historyTimelines={historyTimelines}
           simTimeRef={simTimeRef}
           controlsOpen={controlsOpen}
-          onToggleControls={onToggleControls}
         />
         <BoatPanel
           crews={crews}

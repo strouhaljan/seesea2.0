@@ -1,5 +1,5 @@
 import { useEffect, useRef, MutableRefObject } from "react";
-import mapboxgl, { Map as MapboxMap, Marker, Popup } from "mapbox-gl";
+import { type GeoJSONSource, Map as MapboxMap, Marker, Popup } from "mapbox-gl";
 import { distanceNm } from "../utils/distance";
 
 const HOLD_MS = 1000;
@@ -77,7 +77,7 @@ export function useDistanceMeasure(
       };
 
       if (mp.getSource(LINE_SOURCE)) {
-        (mp.getSource(LINE_SOURCE) as mapboxgl.GeoJSONSource).setData(geojson);
+        (mp.getSource(LINE_SOURCE) as GeoJSONSource).setData(geojson);
       } else {
         mp.addSource(LINE_SOURCE, { type: "geojson", data: geojson });
         mp.addLayer({

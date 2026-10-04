@@ -1,5 +1,5 @@
 import { useEffect, MutableRefObject } from "react";
-import mapboxgl, { Map as MapboxMap } from "mapbox-gl";
+import type { Expression, GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { TailsData } from "./useTails";
 import { Crew } from "./useEventConfig";
 import { ColorMode } from "../types/map";
@@ -10,13 +10,13 @@ const TAIL_LINE_SOURCE = "tail-lines";
 const TAIL_LINE_LAYER = "tail-lines-layer";
 
 /** Same scale as getColorBySpeed, evaluated by Mapbox per segment. */
-const WIND_COLOR: mapboxgl.Expression = [
+const WIND_COLOR: Expression = [
   "case",
   ["has", "tws"],
   ["interpolate", ["linear"], ["get", "tws"], ...WIND_SPEED_COLORS.flatMap((s) => [s.threshold, s.color])],
   ["get", "color"], // vessel without wind data: crew colour, as before
 ];
-const CREW_COLOR: mapboxgl.Expression = ["get", "color"];
+const CREW_COLOR: Expression = ["get", "color"];
 
 interface UseTailLayerOptions {
   tails: TailsData;
@@ -77,7 +77,7 @@ export function useTailLayer(
     const data: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: "FeatureCollection", features };
     const lineColor = colorMode === "wind" ? WIND_COLOR : CREW_COLOR;
 
-    const existingSource = m.getSource(TAIL_LINE_SOURCE) as mapboxgl.GeoJSONSource | undefined;
+    const existingSource = m.getSource(TAIL_LINE_SOURCE) as GeoJSONSource | undefined;
     if (existingSource) {
       existingSource.setData(data);
       m.setPaintProperty(TAIL_LINE_LAYER, "line-color", lineColor);

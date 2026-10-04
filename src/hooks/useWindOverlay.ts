@@ -27,7 +27,6 @@ export function useWindOverlay(
       return;
     }
 
-    let refreshInterval: ReturnType<typeof setInterval>;
 
     const loadGrid = async () => {
       try {
@@ -56,7 +55,7 @@ export function useWindOverlay(
     };
 
     loadGrid();
-    refreshInterval = setInterval(loadGrid, 30 * 60 * 1000);
+    const refreshInterval = setInterval(loadGrid, 30 * 60 * 1000);
 
     return () => {
       clearInterval(refreshInterval);

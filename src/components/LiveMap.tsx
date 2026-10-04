@@ -43,7 +43,6 @@ interface LiveMapProps {
   historyTimelines?: HistoryTimelines;
   simTimeRef?: MutableRefObject<number | null>;
   controlsOpen: boolean;
-  onToggleControls: () => void;
 }
 
 const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
@@ -51,7 +50,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   legs, activeLegId,
   activeBoatId, followedBoatId,
   onBoatClick, onClearActive,
-  isHistoryMode = false, historyTimelines, simTimeRef, controlsOpen, onToggleControls,
+  isHistoryMode = false, historyTimelines, simTimeRef, controlsOpen,
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
