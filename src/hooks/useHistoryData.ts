@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { VesselDataPoint } from "../types/tripData";
 import { TailPoint, TailsData } from "./useTails";
-import { nowSeconds } from "../utils/clock";
+import { getReplay, nowSeconds } from "../utils/clock";
 
 interface ChunkData {
   objects: Record<string, VesselDataPoint[]>;
 }
 
-/** The current (or a future) hour keeps growing — refetch it after this long. */
-const INCOMPLETE_CHUNK_TTL_MS = 30_000;
+/** The current (or a future) hour keeps growing — refetch it after 30 s of race time. */
+const incompleteChunkTtlMs = () => 30_000 / (getReplay()?.speed ?? 1);
 
 interface CachedChunk {
   data: ChunkData;
@@ -101,7 +101,7 @@ class ChunkCache {
 
       this.chunks.set(cacheKey, {
         data,
-        expiresAt: complete ? Infinity : Date.now() + INCOMPLETE_CHUNK_TTL_MS,
+        expiresAt: complete ? Infinity : Date.now() + incompleteChunkTtlMs(),
       });
       return data;
     } catch (err) {

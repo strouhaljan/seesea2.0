@@ -12,8 +12,32 @@ function getParticleCount(): number {
   return window.innerWidth < 768 ? PARTICLE_COUNT_MOBILE : PARTICLE_COUNT;
 }
 
+/** getColorBySpeed precomputed in 0.25 kn steps — called for every particle every frame. */
+const COLOR_STEP_KN = 0.25;
+const SPEED_COLORS = Array.from({ length: Math.ceil(45 / COLOR_STEP_KN) + 1 }, (_, i) => getColorBySpeed(i * COLOR_STEP_KN));
+function colorForSpeed(knots: number): string {
+  const i = Math.round(knots / COLOR_STEP_KN);
+  return SPEED_COLORS[Math.max(0, Math.min(SPEED_COLORS.length - 1, i))];
+}
+
+interface Bounds {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+/**
+ * Trails are kept in screen pixels: every camera move resets all particles,
+ * so pixel positions never go stale, and each frame needs one unproject per
+ * particle (for the wind lookup) instead of a project per trail point.
+ */
 interface Particle {
-  trail: Array<{ lng: number; lat: number }>;
+  /** Head position, for the wind lookup. */
+  lng: number;
+  lat: number;
+  /** CSS pixels, newest first. */
+  trail: Array<{ x: number; y: number }>;
   age: number;
   speed: number;
 }
@@ -33,9 +57,10 @@ export class WindOverlay {
     this.composite = composite;
 
     const count = getParticleCount();
+    const area = this.spawnArea();
     this.particles = [];
     for (let i = 0; i < count; i++) {
-      this.particles.push(this.createParticle());
+      this.particles.push(this.createParticle(area));
     }
 
     this.canvas = document.createElement("canvas");
@@ -100,13 +125,14 @@ export class WindOverlay {
   };
 
   private onCameraChange = (): void => {
+    const area = this.spawnArea();
     for (const p of this.particles) {
-      this.resetParticle(p);
+      this.resetParticle(p, area);
     }
   };
 
   /** Compute the overall bounding box across all regions. */
-  private getCompositeBounds(): { minLat: number; maxLat: number; minLng: number; maxLng: number } {
+  private getCompositeBounds(): Bounds {
     let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
     for (const grid of this.composite) {
       if (grid.bounds.minLat < minLat) minLat = grid.bounds.minLat;
@@ -117,46 +143,32 @@ export class WindOverlay {
     return { minLat, maxLat, minLng, maxLng };
   }
 
-  private randomInViewport(): { lng: number; lat: number } {
+  /** Where new particles may appear: wind coverage clipped to the viewport. */
+  private spawnArea(): Bounds {
     const bounds = this.getCompositeBounds();
-    let minLat = bounds.minLat;
-    let maxLat = bounds.maxLat;
-    let minLng = bounds.minLng;
-    let maxLng = bounds.maxLng;
-
     const mb = this.map.getBounds();
-    if (mb) {
-      minLat = Math.max(minLat, mb.getSouth());
-      maxLat = Math.min(maxLat, mb.getNorth());
-      minLng = Math.max(minLng, mb.getWest());
-      maxLng = Math.min(maxLng, mb.getEast());
-    }
-
-    if (minLat >= maxLat || minLng >= maxLng) {
-      minLat = bounds.minLat;
-      maxLat = bounds.maxLat;
-      minLng = bounds.minLng;
-      maxLng = bounds.maxLng;
-    }
-
-    return {
-      lng: minLng + Math.random() * (maxLng - minLng),
-      lat: minLat + Math.random() * (maxLat - minLat),
+    if (!mb) return bounds;
+    const area = {
+      minLat: Math.max(bounds.minLat, mb.getSouth()),
+      maxLat: Math.min(bounds.maxLat, mb.getNorth()),
+      minLng: Math.max(bounds.minLng, mb.getWest()),
+      maxLng: Math.min(bounds.maxLng, mb.getEast()),
     };
+    return area.minLat >= area.maxLat || area.minLng >= area.maxLng ? bounds : area;
   }
 
-  private createParticle(): Particle {
-    const pos = this.randomInViewport();
-    return {
-      trail: [pos],
-      age: Math.floor(Math.random() * MAX_AGE),
-      speed: 0,
-    };
+  private createParticle(area: Bounds): Particle {
+    const p: Particle = { lng: 0, lat: 0, trail: [], age: 0, speed: 0 };
+    this.resetParticle(p, area);
+    p.age = Math.floor(Math.random() * MAX_AGE);
+    return p;
   }
 
-  private resetParticle(p: Particle): void {
-    const pos = this.randomInViewport();
-    p.trail = [pos];
+  private resetParticle(p: Particle, area: Bounds = this.spawnArea()): void {
+    p.lng = area.minLng + Math.random() * (area.maxLng - area.minLng);
+    p.lat = area.minLat + Math.random() * (area.maxLat - area.minLat);
+    const px = this.map.project([p.lng, p.lat]);
+    p.trail = [{ x: px.x, y: px.y }];
     p.age = MAX_AGE;
     p.speed = 0;
   }
@@ -165,21 +177,6 @@ export class WindOverlay {
     const zoom = this.map.getZoom();
     const factor = Math.pow(2, (zoom - 9) / 2);
     return Math.round(BASE_TRAIL_LENGTH * Math.max(factor, 1));
-  }
-
-  private advancePosition(
-    lng: number,
-    lat: number,
-    windU: number,
-    windV: number,
-  ): { lng: number; lat: number } {
-    const px = this.map.project([lng, lat]);
-    const scale = 0.15;
-    const newPos = this.map.unproject([
-      px.x + windU * scale,
-      px.y - windV * scale,
-    ]);
-    return { lng: newPos.lng, lat: newPos.lat };
   }
 
   private animate = (): void => {
@@ -196,28 +193,29 @@ export class WindOverlay {
     ctx.lineCap = "round";
 
     const trailLength = this.getTrailLength();
+    const area = this.spawnArea();
+    const scale = 0.15;
+    const margin = 50;
 
     for (const particle of this.particles) {
       if (particle.age <= 0 || Math.random() < 0.003) {
-        this.resetParticle(particle);
+        this.resetParticle(particle, area);
+        continue;
+      }
+
+      const wind = interpolateWind(this.composite, particle.lat, particle.lng);
+      if (!wind) {
+        this.resetParticle(particle, area);
         continue;
       }
 
       const head = particle.trail[0];
-      const wind = interpolateWind(this.composite, head.lat, head.lng);
-      if (!wind) {
-        this.resetParticle(particle);
-        continue;
-      }
+      const next = { x: head.x + wind.u * scale, y: head.y - wind.v * scale };
+      const ll = this.map.unproject([next.x, next.y]);
+      particle.lng = ll.lng;
+      particle.lat = ll.lat;
 
-      const newPos = this.advancePosition(
-        head.lng,
-        head.lat,
-        wind.u,
-        wind.v,
-      );
-
-      particle.trail.unshift(newPos);
+      particle.trail.unshift(next);
       if (particle.trail.length > trailLength) {
         particle.trail.length = trailLength;
       }
@@ -227,33 +225,28 @@ export class WindOverlay {
 
       if (particle.trail.length < 2) continue;
 
-      const headPx = this.map.project([newPos.lng, newPos.lat]);
-      const headX = headPx.x * dpr;
-      const headY = headPx.y * dpr;
-      const margin = 50;
+      const headX = next.x * dpr;
+      const headY = next.y * dpr;
       if (
         headX < -margin ||
         headX > this.canvas.width + margin ||
         headY < -margin ||
         headY > this.canvas.height + margin
       ) {
-        this.resetParticle(particle);
+        this.resetParticle(particle, area);
         continue;
       }
 
-      const color = getColorBySpeed(particle.speed);
+      ctx.strokeStyle = colorForSpeed(particle.speed);
 
       for (let j = 0; j < particle.trail.length - 1; j++) {
         const from = particle.trail[j];
         const to = particle.trail[j + 1];
 
-        const pxFrom = this.map.project([from.lng, from.lat]);
-        const pxTo = this.map.project([to.lng, to.lat]);
-
-        const sx1 = pxFrom.x * dpr;
-        const sy1 = pxFrom.y * dpr;
-        const sx2 = pxTo.x * dpr;
-        const sy2 = pxTo.y * dpr;
+        const sx1 = from.x * dpr;
+        const sy1 = from.y * dpr;
+        const sx2 = to.x * dpr;
+        const sy2 = to.y * dpr;
 
         const dx = sx2 - sx1;
         const dy = sy2 - sy1;
@@ -261,7 +254,6 @@ export class WindOverlay {
 
         const alpha = 1 - j / particle.trail.length;
         ctx.globalAlpha = alpha * 0.7;
-        ctx.strokeStyle = color;
         ctx.beginPath();
         ctx.moveTo(sx1, sy1);
         ctx.lineTo(sx2, sy2);

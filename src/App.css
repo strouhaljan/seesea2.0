@@ -96,23 +96,38 @@ header h1 {
 }
 
 .event-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   min-width: 0;
   max-width: 60vw;
+  font-size: 0.9rem;
+  color: var(--panel-text);
+  border-radius: 4px;
+}
+
+.event-picker:focus-within {
+  outline: 1px solid #4a9eff;
+  outline-offset: 2px;
+}
+
+.event-picker__label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.9rem;
-  color: var(--panel-text);
-  background: transparent;
-  border: none;
-  outline: none;
 }
 
-select.event-picker {
+.event-picker__select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
   cursor: pointer;
+  font-size: 16px; /* keeps iOS from zooming in on focus */
 }
 
-select.event-picker option {
+.event-picker__select option {
   color: var(--panel-text);
   background: var(--panel-bg-solid);
 }

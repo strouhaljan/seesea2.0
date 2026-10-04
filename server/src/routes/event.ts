@@ -16,8 +16,6 @@ router.get("/:slug", async (req, res) => {
     const config = await getEventConfig(slug);
     res.json({
       eventId: config.eventId,
-      name: config.name,
-      center: config.center,
       crews: config.crews,
       legs: config.legs,
     });
