@@ -9,6 +9,7 @@ import { useTails } from "../hooks/useTails";
 import { useLegMarkers } from "../hooks/useLegMarkers";
 import { useHistoryData } from "../hooks/useHistoryData";
 import { now as raceNow } from "../utils/clock";
+import { pickCurrentLeg } from "../utils/legs";
 import ReplayBadge from "../components/ReplayBadge";
 
 interface LiveData {
@@ -40,16 +41,14 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
   const legKey = `selectedLegId:${slug}`;
   const mapRef = useRef<LiveMapHandle>(null);
 
-  // Auto-detected active leg (by current time)
-  const autoLeg = useMemo(() => {
-    const active = legs.filter((l) => l.active === 1);
-    if (active.length === 0) return null;
-    const now = raceNow();
-    const current = active.find(
-      (l) => new Date(l.start).getTime() <= now && new Date(l.end).getTime() >= now,
-    );
-    return current ?? active[0];
-  }, [legs]);
+  // Auto-detected leg by race time, re-picked every minute so a multi-day event
+  // moves on to the next leg without a reload
+  const [legClock, setLegClock] = useState(raceNow);
+  useEffect(() => {
+    const id = setInterval(() => setLegClock(raceNow()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const autoLeg = useMemo(() => pickCurrentLeg(legs, legClock), [legs, legClock]);
 
   // Allow manual leg override from settings
   const selectedLegId = useMemo(() => {

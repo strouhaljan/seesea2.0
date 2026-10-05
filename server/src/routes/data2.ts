@@ -137,8 +137,10 @@ router.get("/:eventId/chunk", async (req, res) => {
   const hourStart = Number(hour);
   const chunk = await fetchChunk(eventId, hourStart);
 
+  // Not "empty": the client caches finished hours forever, so an upstream
+  // failure answered as {} would leave a permanent gap in the history
   if (!chunk) {
-    res.json({ objects: {} });
+    res.status(502).json({ error: "History unavailable" });
     return;
   }
 
