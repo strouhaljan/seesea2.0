@@ -11,6 +11,11 @@ import { useHistoryData } from "../hooks/useHistoryData";
 import { now as raceNow } from "../utils/clock";
 import { pickCurrentLeg } from "../utils/legs";
 import ReplayBadge from "../components/ReplayBadge";
+import { useFleetStats } from "../hooks/useFleetStats";
+import BoatList from "../components/BoatList";
+import BoatCard from "../components/BoatCard";
+import BottomSheet from "../components/BottomSheet";
+import { SheetSnap, safeAreaBottom, sheetHeight } from "../utils/sheet";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -30,14 +35,20 @@ interface LivePageProps {
   panelCollapsed: boolean;
   onTogglePanel: () => void;
   controlsOpen: boolean;
+  isPhone: boolean;
+  sheetSnap: SheetSnap;
+  onSheetSnapChange: (snap: SheetSnap) => void;
+  onCloseControls: () => void;
 }
 
-export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePageProps) => {
+export const LivePage = ({
+  panelCollapsed, onTogglePanel, controlsOpen, isPhone, sheetSnap, onSheetSnapChange, onCloseControls,
+}: LivePageProps) => {
   const [liveData, setLiveData] = useState<Record<string, VesselDataPoint>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const { eventId, crews, legs, slug } = useEventConfig();
+  const { eventId, crews, legs, slug, highlightedCrews, toggleHighlight } = useEventConfig();
   const legKey = `selectedLegId:${slug}`;
   const mapRef = useRef<LiveMapHandle>(null);
 
@@ -91,6 +102,46 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
   const simTimeRef = useRef<number | null>(null);
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
   const [followedBoatId, setFollowedBoatId] = useState<number | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [cardBoatId, setCardBoatId] = useState<number | null>(null);
+
+  // Phones: the sheet, controls and history never cover each other. Every path that
+  // changes the sheet height (drag, ⛵, ⚙, history tab, opening a card) ends up here.
+  useEffect(() => {
+    if (!isPhone) return;
+    if (sheetSnap === "bar") {
+      setCardBoatId(null); // the bar shows the search row, not a card
+    } else {
+      onCloseControls();
+      setHistoryOpen(false);
+    }
+  }, [isPhone, sheetSnap, onCloseControls]);
+
+  const handleHistoryOpen = useCallback((open: boolean) => {
+    setHistoryOpen(open);
+    if (open && isPhone) {
+      onCloseControls();
+      onSheetSnapChange("bar");
+    }
+  }, [isPhone, onCloseControls, onSheetSnapChange]);
+
+  useEffect(() => {
+    if (isPhone && controlsOpen) setHistoryOpen(false);
+  }, [isPhone, controlsOpen]);
+
+  // Visible sheet height including the iPhone home-indicator inset
+  const sheetPx = useMemo(() => (isPhone ? sheetHeight(sheetSnap) + safeAreaBottom() : 0), [isPhone, sheetSnap]);
+
+  // Keep centring and following above the sheet
+  useEffect(() => {
+    mapRef.current?.setBottomPadding(sheetPx);
+  }, [sheetPx]);
+
+  // The map registers its click handler once, so read the latest values from refs
+  const isPhoneRef = useRef(isPhone);
+  isPhoneRef.current = isPhone;
+  const closeControlsRef = useRef(onCloseControls);
+  closeControlsRef.current = onCloseControls;
 
   // Sync trailMinutes from localStorage (LiveMap dispatches trailMinutesChanged)
   useEffect(() => {
@@ -101,16 +152,45 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
 
   const isHistoryMode = selectedTime !== null;
   const displayData = isHistoryMode && Object.keys(historyData).length > 0 ? historyData : liveData;
+  const stats = useFleetStats(crews, displayData, legMarkers);
 
-  const handleBoatClick = useCallback((boatId: number) => {
+  // Phones: tapping a boat (map or list) opens its card and centres it, without following
+  const openCard = useCallback((boatId: number) => {
+    setActiveBoatId(boatId);
+    setCardBoatId(boatId);
+    // Following another boat would pull the map straight back to it
+    setFollowedBoatId((f) => (f === boatId ? f : null));
+    const targetSnap = sheetSnap === "bar" ? "half" : sheetSnap;
+    if (targetSnap !== sheetSnap) onSheetSnapChange(targetSnap);
+    onCloseControls();
+    setHistoryOpen(false);
+    const coords = displayData[String(boatId)]?.coords;
+    if (coords) mapRef.current?.centerOn(coords, sheetHeight(targetSnap) + safeAreaBottom());
+  }, [sheetSnap, onSheetSnapChange, onCloseControls, displayData]);
+
+  const closeCard = useCallback(() => {
+    setCardBoatId(null);
+    setActiveBoatId(null);
+  }, []);
+
+  const latestBoatClick = useRef<(boatId: number) => void>(() => {});
+  latestBoatClick.current = (boatId: number) => {
+    if (isPhone) {
+      openCard(boatId);
+      return;
+    }
     setActiveBoatId(boatId);
     setFollowedBoatId(boatId);
     if (panelCollapsed) onTogglePanel();
-  }, [panelCollapsed, onTogglePanel]);
+  };
+  // Stable identity: markers keep the click handler they were created with
+  const handleBoatClick = useCallback((boatId: number) => latestBoatClick.current(boatId), []);
 
   const handleClearActive = useCallback(() => {
     setActiveBoatId(null);
     setFollowedBoatId(null);
+    setCardBoatId(null);
+    if (isPhoneRef.current) closeControlsRef.current();
   }, []);
 
   const handleStopFollow = useCallback(() => {
@@ -189,7 +269,10 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
   }, [hasStaleData]);
 
   return (
-    <div className="map-view live-view">
+    <div
+      className="map-view live-view"
+      style={{ "--sheet-height": `${sheetPx}px` } as React.CSSProperties}
+    >
       {hasStaleData && lastUpdated && (
         <div className="stale-data-alert">
           <div className="stale-data-alert-content">
@@ -243,26 +326,60 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
           simTimeRef={simTimeRef}
           controlsOpen={controlsOpen}
         />
-        <BoatPanel
-          crews={crews}
-          vesselsData={displayData}
-          legMarkers={legMarkers}
-          activeBoatId={activeBoatId}
-          followedBoatId={followedBoatId}
-          collapsed={panelCollapsed}
-          onToggleCollapsed={onTogglePanel}
-          onFocusBoat={handleFocusBoat}
-          onActivate={(id) => setActiveBoatId(id)}
-        />
+        {isPhone ? (
+          <BottomSheet snap={sheetSnap} onSnapChange={onSheetSnapChange}>
+            {cardBoatId != null && crews.some((c) => c.id === cardBoatId) ? (
+              <BoatCard
+                crew={crews.find((c) => c.id === cardBoatId)!}
+                data={displayData[String(cardBoatId)]}
+                dtf={stats.dtf.get(cardBoatId)}
+                position={stats.position.get(cardBoatId)}
+                following={followedBoatId === cardBoatId}
+                highlighted={highlightedCrews.has(cardBoatId)}
+                isHistoryMode={isHistoryMode}
+                onToggleFollow={() => setFollowedBoatId((f) => (f === cardBoatId ? null : cardBoatId))}
+                onToggleHighlight={() => toggleHighlight(cardBoatId)}
+                onClose={closeCard}
+              />
+            ) : (
+              <BoatList
+                crews={crews}
+                vesselsData={displayData}
+                stats={stats}
+                activeBoatId={activeBoatId}
+                followedBoatId={followedBoatId}
+                onSelect={openCard}
+              />
+            )}
+          </BottomSheet>
+        ) : (
+          <BoatPanel
+            crews={crews}
+            vesselsData={displayData}
+            stats={stats}
+            activeBoatId={activeBoatId}
+            followedBoatId={followedBoatId}
+            collapsed={panelCollapsed}
+            onToggleCollapsed={onTogglePanel}
+            onSelect={(id) => {
+              setActiveBoatId(id);
+              handleFocusBoat(id);
+            }}
+          />
+        )}
       </div>
 
       {lastUpdated && !error && !isHistoryMode && <div className="live-dot" />}
       <ReplayBadge />
 
-      {followedBoatId != null && (() => {
+      {/* Phones: the card's button shows following while it's open; otherwise this pill does */}
+      {followedBoatId != null && !(isPhone && cardBoatId === followedBoatId) && (() => {
         const crew = crews.find((c) => c.id === followedBoatId);
         return (
-          <div className="follow-indicator" onClick={handleStopFollow}>
+          <div
+            className={`follow-indicator ${!isPhone && !panelCollapsed ? "follow-indicator--beside-panel" : ""}`}
+            onClick={handleStopFollow}
+          >
             <span className="follow-indicator__dot" />
             Following {crew?.name ?? `#${followedBoatId}`} — tap to stop
           </div>
@@ -275,6 +392,8 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
         currentTime={selectedTime}
         onTimeChange={setSelectedTime}
         simTimeRef={simTimeRef}
+        expanded={historyOpen}
+        onExpandedChange={handleHistoryOpen}
       />
     </div>
   );

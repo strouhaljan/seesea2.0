@@ -2,12 +2,17 @@ import { EventConfigContext, useEventConfigLoader } from "../hooks/useEventConfi
 import { useHighlightedCrews } from "../hooks/useHighlightedCrews";
 import type { EventSummary } from "../hooks/useEvents";
 import { LivePage } from "../pages/LivePage";
+import type { SheetSnap } from "../utils/sheet";
 
 interface EventScopeProps {
   event: EventSummary;
   panelCollapsed: boolean;
   onTogglePanel: () => void;
   controlsOpen: boolean;
+  isPhone: boolean;
+  sheetSnap: SheetSnap;
+  onSheetSnapChange: (snap: SheetSnap) => void;
+  onCloseControls: () => void;
 }
 
 /**

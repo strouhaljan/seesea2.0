@@ -4,6 +4,8 @@ import "./App.css";
 import { useEventRoute, useEvents } from "./hooks/useEvents";
 import EventPicker from "./components/EventPicker";
 import EventScope from "./components/EventScope";
+import { isPhoneNow, useIsPhone } from "./hooks/useIsPhone";
+import type { SheetSnap } from "./utils/sheet";
 
 function App() {
   const { events, error: eventsError } = useEvents();
@@ -17,22 +19,46 @@ function App() {
       return !v;
     });
   }, []);
-  const [controlsOpen, setControlsOpen] = useState(
-    () => localStorage.getItem("controlsOpen") !== "false"
-  );
-  const toggleControls = useCallback(() => {
-    setControlsOpen((v) => {
-      localStorage.setItem("controlsOpen", String(!v));
-      return !v;
-    });
+  const isPhone = useIsPhone();
+  // Phones start with the map clear; desktop keeps the controls open by default
+  const [controlsOpen, setControlsOpenState] = useState(() => {
+    const saved = localStorage.getItem("controlsOpen");
+    return saved === null ? !isPhoneNow() : saved !== "false";
+  });
+  const setControlsOpen = useCallback((open: boolean) => {
+    localStorage.setItem("controlsOpen", String(open));
+    setControlsOpenState(open);
   }, []);
+  const closeControls = useCallback(() => setControlsOpen(false), [setControlsOpen]);
+
+  const [sheetSnap, setSheetSnapState] = useState<SheetSnap>(
+    () => (localStorage.getItem("boatSheetSnap") as SheetSnap) || "bar",
+  );
+  const setSheetSnap = useCallback((snap: SheetSnap) => {
+    localStorage.setItem("boatSheetSnap", snap);
+    setSheetSnapState(snap);
+  }, []);
+
+  const toggleControls = useCallback(() => {
+    const open = !controlsOpen;
+    setControlsOpen(open);
+    if (open && isPhone) setSheetSnap("bar");
+  }, [controlsOpen, isPhone, setControlsOpen, setSheetSnap]);
+
+  // ⛵ on phones raises/lowers the boat sheet; on desktop it toggles the side panel
+  const toggleBoats = useCallback(() => {
+    if (!isPhone) return togglePanel();
+    const raise = sheetSnap === "bar";
+    setSheetSnap(raise ? "half" : "bar");
+    if (raise) setControlsOpen(false);
+  }, [isPhone, sheetSnap, setSheetSnap, setControlsOpen, togglePanel]);
 
   return (
     <div className="app-container">
       <header>
         <button
           className="header__panel-toggle"
-          onClick={togglePanel}
+          onClick={toggleBoats}
           title={panelCollapsed ? "Show vessels" : "Hide vessels"}
         >
           <Sailboat size={18} />
@@ -61,6 +87,10 @@ function App() {
             event={selected}
             panelCollapsed={panelCollapsed}
             onTogglePanel={togglePanel}
+            isPhone={isPhone}
+            sheetSnap={sheetSnap}
+            onSheetSnapChange={setSheetSnap}
+            onCloseControls={closeControls}
             controlsOpen={controlsOpen}
           />
         ) : (

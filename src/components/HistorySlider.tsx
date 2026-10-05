@@ -13,6 +13,9 @@ interface HistorySliderProps {
   onTimeChange: React.Dispatch<React.SetStateAction<number | null>>;
   /** Ref updated at 60fps with the precise simulated time (seconds) during playback */
   simTimeRef?: MutableRefObject<number | null>;
+  /** Whether the panel is open (owned by the page, so phones can keep one panel open at a time). */
+  expanded: boolean;
+  onExpandedChange: (open: boolean) => void;
 }
 
 /** Hook that fires a callback on press, then repeatedly every 250ms while held */
@@ -52,8 +55,10 @@ const HistorySlider = ({
   currentTime,
   onTimeChange,
   simTimeRef,
+  expanded,
+  onExpandedChange,
 }: HistorySliderProps) => {
-  const [expanded, setExpanded] = useState(false);
+  const setExpanded = onExpandedChange;
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const playbackSpeedRef = useRef(playbackSpeed);
@@ -88,7 +93,7 @@ const HistorySlider = ({
     if (simTimeRef) simTimeRef.current = null;
     onTimeChange(null);
     setExpanded(false);
-  }, [onTimeChange, stopPlayback, simTimeRef]);
+  }, [onTimeChange, stopPlayback, simTimeRef, setExpanded]);
 
   const step = useCallback(
     (seconds: number) => {
