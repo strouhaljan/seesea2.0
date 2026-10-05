@@ -19,9 +19,11 @@ const OPEN_METEO_HISTORICAL_URL = "https://historical-forecast-api.open-meteo.co
 const WIND_VARS = "hourly=wind_speed_10m,wind_direction_10m";
 /** A hanging upstream must not hold requests (and the app shell) open indefinitely. */
 const UPSTREAM_TIMEOUT_MS = 20_000;
+/** Hourly history is ~1–3 MB and SeeSea is sometimes slow to produce it; nothing waits on it. */
+const HISTORY_TIMEOUT_MS = 60_000;
 
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+async function getJson<T>(url: string, timeoutMs = UPSTREAM_TIMEOUT_MS): Promise<T> {
+  const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) {
     throw new UpstreamError(response.status, `Upstream ${response.status} for ${url}`);
   }
@@ -68,7 +70,7 @@ export class HttpUpstream implements Upstream {
     const start = toUpstreamTime(hourStart);
     const end = toUpstreamTime(hourStart + 3600);
     const url = `${SEESEA_API_URL}/cc_event/${eventId}/data2/?gps_datetime_0=${encodeURIComponent(start)}&gps_datetime_1=${encodeURIComponent(end)}&page_size=1000000&detailed=1`;
-    const data = await getJson<{ objects?: Record<string, SlimPoint[]> }>(url);
+    const data = await getJson<{ objects?: Record<string, SlimPoint[]> }>(url, HISTORY_TIMEOUT_MS);
 
     // Slim the data before storing to save space
     const slimmed: DataHour = {};
@@ -96,5 +98,5 @@ export async function getWindHistory(
   const url =
     `${OPEN_METEO_HISTORICAL_URL}/forecast?${gridQuery(region)}&${WIND_VARS}` +
     `&models=${MODEL_PARAMS[model]}&start_date=${startDate}&end_date=${endDate}`;
-  return toPoints(await getJson(url));
+  return toPoints(await getJson(url, HISTORY_TIMEOUT_MS));
 }
