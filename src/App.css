@@ -531,6 +531,13 @@ main {
   transform: translateX(-100%);
 }
 
+.boat-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 
 .boat-panel__list {
   display: flex;

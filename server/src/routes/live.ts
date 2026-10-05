@@ -2,7 +2,7 @@ import { Router } from "express";
 import { upstream } from "../upstream/index.js";
 import { sendUpstreamError } from "./upstreamError.js";
 
-const ALLOWED_FIELDS = ["coords", "hdg", "cog", "sog", "twa", "tws"] as const;
+const ALLOWED_FIELDS = ["time", "coords", "hdg", "cog", "sog", "twa", "tws"] as const;
 
 const router = Router();
 

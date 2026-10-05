@@ -11,6 +11,7 @@ import { useHistoryData } from "../hooks/useHistoryData";
 import { now as raceNow } from "../utils/clock";
 import { pickCurrentLeg } from "../utils/legs";
 import ReplayBadge from "../components/ReplayBadge";
+import { useFleetStats } from "../hooks/useFleetStats";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -101,6 +102,7 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
 
   const isHistoryMode = selectedTime !== null;
   const displayData = isHistoryMode && Object.keys(historyData).length > 0 ? historyData : liveData;
+  const stats = useFleetStats(crews, displayData, legMarkers);
 
   const handleBoatClick = useCallback((boatId: number) => {
     setActiveBoatId(boatId);
@@ -246,13 +248,15 @@ export const LivePage = ({ panelCollapsed, onTogglePanel, controlsOpen }: LivePa
         <BoatPanel
           crews={crews}
           vesselsData={displayData}
-          legMarkers={legMarkers}
+          stats={stats}
           activeBoatId={activeBoatId}
           followedBoatId={followedBoatId}
           collapsed={panelCollapsed}
           onToggleCollapsed={onTogglePanel}
-          onFocusBoat={handleFocusBoat}
-          onActivate={(id) => setActiveBoatId(id)}
+          onSelect={(id) => {
+            setActiveBoatId(id);
+            handleFocusBoat(id);
+          }}
         />
       </div>
 
