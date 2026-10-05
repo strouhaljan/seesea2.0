@@ -41,7 +41,7 @@ Desktop keeps its current layout.
 ### 2. Bottom sheet (`BottomSheet` component)
 
 - Fixed to the bottom of the map area, full width, rounded top corners, opaque panel background.
-- Three snap heights: **bar** ≈ 60 px (handle + first list row), **half** ≈ 45% of the viewport, **full** ≈ 85% (header stays visible).
+- Three snap heights: **bar** = 76 px (handle + the search/sort row — a boat card is ~90 px tall, too tall for a slim bar), **half** = 45% of the viewport, **full** = 85% (header stays visible).
 - Drag the handle with pointer events (touch and mouse) and snap to the nearest height on release (with a velocity flick to the next height); tapping the handle toggles bar ↔ half. No external library.
 - Content scrolls inside the sheet at half/full; at bar only the first row shows.
 - First visit: **bar**. Last height is remembered in localStorage (`boatSheetSnap`).
@@ -71,8 +71,8 @@ Desktop keeps its current layout.
 - Opening controls (header ⚙) or history (top tab) collapses the sheet to **bar** and closes the other one.
 - Expanding the sheet (drag/tap) closes controls and history.
 - Tapping the map closes the controls panel.
-- `HistorySlider` gains `expanded` / `onExpandedChange` props (controlled), keeping its own state when they're not passed (desktop).
-- The controls card sits above the sheet's bar.
+- `HistorySlider` becomes controlled (`expanded` / `onExpandedChange`), owned by `LivePage` on all screen sizes (its only user).
+- The controls card, live dot, wind legend and Mapbox attribution sit above the sheet: `LivePage` publishes the sheet's height as the CSS variable `--sheet-height`.
 - The header ⛵ button on phones toggles the sheet bar ↔ half instead of the side panel.
 
 ### 6. Server
