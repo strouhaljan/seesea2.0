@@ -1,9 +1,11 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { SHEET_SNAPS as ORDER, SheetSnap, sheetHeight } from "../utils/sheet";
+import { SHEET_SNAPS as ORDER, SheetSnap, safeAreaBottom, sheetHeight } from "../utils/sheet";
 
 const TAP_SLOP_PX = 6;
 /** Release speed (px/ms) that counts as a flick to the next height. */
 const FLICK_PX_PER_MS = 0.5;
+/** A pause longer than this before release cancels the flick. */
+const FLICK_MAX_PAUSE_MS = 100;
 
 interface BottomSheetProps {
   snap: SheetSnap;
@@ -14,11 +16,15 @@ interface BottomSheetProps {
 /** Draggable bottom sheet with three heights (phones). Tap the handle to toggle bar ↔ half. */
 export default function BottomSheet({ snap, onSnapChange, children }: BottomSheetProps) {
   const [viewport, setViewport] = useState(() => window.innerHeight);
+  const [inset, setInset] = useState(safeAreaBottom);
   const [dragHeight, setDragHeight] = useState<number | null>(null);
   const drag = useRef<{ startY: number; startH: number; lastY: number; lastT: number; v: number } | null>(null);
 
   useEffect(() => {
-    const onResize = () => setViewport(window.innerHeight);
+    const onResize = () => {
+      setViewport(window.innerHeight);
+      setInset(safeAreaBottom());
+    };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -53,8 +59,10 @@ export default function BottomSheet({ snap, onSnapChange, children }: BottomShee
     }
     const h = d.startH + (d.startY - e.clientY);
     let next: number;
-    if (Math.abs(d.v) > FLICK_PX_PER_MS) {
-      next = ORDER.indexOf(snap) + Math.sign(d.v);
+    if (Math.abs(d.v) > FLICK_PX_PER_MS && e.timeStamp - d.lastT < FLICK_MAX_PAUSE_MS) {
+      // Flick: the next height beyond where the finger let go, in the flick's direction
+      const beyond = heights.map((_, i) => i).filter((i) => (d.v > 0 ? heights[i] > h + 1 : heights[i] < h - 1));
+      next = beyond.length > 0 ? (d.v > 0 ? beyond[0] : beyond[beyond.length - 1]) : d.v > 0 ? ORDER.length - 1 : 0;
     } else {
       next = heights.reduce((best, x, i) => (Math.abs(x - h) < Math.abs(heights[best] - h) ? i : best), 0);
     }
@@ -62,7 +70,10 @@ export default function BottomSheet({ snap, onSnapChange, children }: BottomShee
   };
 
   return (
-    <div className={`bottom-sheet ${dragHeight !== null ? "bottom-sheet--dragging" : ""}`} style={{ height }}>
+    <div
+      className={`bottom-sheet ${dragHeight !== null ? "bottom-sheet--dragging" : ""}`}
+      style={{ height: height + inset }}
+    >
       <div
         className="bottom-sheet__handle"
         role="button"

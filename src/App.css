@@ -1,3 +1,8 @@
+/* iPhone home-indicator inset; a variable so the sheet and its JS height agree */
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 :root,
 [data-theme="dark"] {
   --panel-bg: rgba(26, 26, 46, 0.9);
@@ -854,7 +859,7 @@ main {
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.45);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: var(--safe-bottom, 0px);
   transition: height 0.25s ease;
   overflow: hidden;
 }
@@ -865,7 +870,7 @@ main {
 
 .bottom-sheet__handle {
   flex-shrink: 0;
-  height: 22px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -908,6 +913,10 @@ main {
 
   .wind-legend {
     bottom: var(--sheet-height, 0px);
+  }
+
+  .follow-indicator {
+    bottom: calc(var(--sheet-height, 0px) + 12px);
   }
 
   /* Scoped so it outranks mapbox-gl.css, which loads after this file */

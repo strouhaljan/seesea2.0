@@ -41,7 +41,7 @@ Desktop keeps its current layout.
 ### 2. Bottom sheet (`BottomSheet` component)
 
 - Fixed to the bottom of the map area, full width, rounded top corners, opaque panel background.
-- Three snap heights: **bar** = 76 px (handle + the search/sort row — a boat card is ~90 px tall, too tall for a slim bar), **half** = 45% of the viewport, **full** = 85% (header stays visible).
+- Three snap heights: **bar** = 90 px (a 36 px handle — a comfortable touch target — plus the search/sort row; a boat card is ~90 px tall, too tall for a slim bar), plus the iPhone home-indicator inset, **half** = 45% of the viewport, **full** = 85% (header stays visible).
 - Drag the handle with pointer events (touch and mouse) and snap to the nearest height on release (with a velocity flick to the next height); tapping the handle toggles bar ↔ half. No external library.
 - Content scrolls inside the sheet at half/full; at bar only the first row shows.
 - First visit: **bar**. Last height is remembered in localStorage (`boatSheetSnap`).

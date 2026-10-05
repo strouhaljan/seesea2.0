@@ -15,7 +15,7 @@ import { useFleetStats } from "../hooks/useFleetStats";
 import BoatList from "../components/BoatList";
 import BoatCard from "../components/BoatCard";
 import BottomSheet from "../components/BottomSheet";
-import { SheetSnap, sheetHeight } from "../utils/sheet";
+import { SheetSnap, safeAreaBottom, sheetHeight } from "../utils/sheet";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -105,15 +105,17 @@ export const LivePage = ({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [cardBoatId, setCardBoatId] = useState<number | null>(null);
 
-  // Phones: the sheet, controls and history never cover each other
-  const handleSheetSnap = useCallback((snap: SheetSnap) => {
-    if (snap === "bar") setCardBoatId(null);
-    onSheetSnapChange(snap);
-    if (snap !== "bar") {
+  // Phones: the sheet, controls and history never cover each other. Every path that
+  // changes the sheet height (drag, ⛵, ⚙, history tab, opening a card) ends up here.
+  useEffect(() => {
+    if (!isPhone) return;
+    if (sheetSnap === "bar") {
+      setCardBoatId(null); // the bar shows the search row, not a card
+    } else {
       onCloseControls();
       setHistoryOpen(false);
     }
-  }, [onSheetSnapChange, onCloseControls]);
+  }, [isPhone, sheetSnap, onCloseControls]);
 
   const handleHistoryOpen = useCallback((open: boolean) => {
     setHistoryOpen(open);
@@ -127,10 +129,13 @@ export const LivePage = ({
     if (isPhone && controlsOpen) setHistoryOpen(false);
   }, [isPhone, controlsOpen]);
 
+  // Visible sheet height including the iPhone home-indicator inset
+  const sheetPx = useMemo(() => (isPhone ? sheetHeight(sheetSnap) + safeAreaBottom() : 0), [isPhone, sheetSnap]);
+
   // Keep centring and following above the sheet
   useEffect(() => {
-    mapRef.current?.setBottomPadding(isPhone ? sheetHeight(sheetSnap) : 0);
-  }, [isPhone, sheetSnap]);
+    mapRef.current?.setBottomPadding(sheetPx);
+  }, [sheetPx]);
 
   // The map registers its click handler once, so read the latest values from refs
   const isPhoneRef = useRef(isPhone);
@@ -153,12 +158,14 @@ export const LivePage = ({
   const openCard = useCallback((boatId: number) => {
     setActiveBoatId(boatId);
     setCardBoatId(boatId);
+    // Following another boat would pull the map straight back to it
+    setFollowedBoatId((f) => (f === boatId ? f : null));
     const targetSnap = sheetSnap === "bar" ? "half" : sheetSnap;
     if (targetSnap !== sheetSnap) onSheetSnapChange(targetSnap);
     onCloseControls();
     setHistoryOpen(false);
     const coords = displayData[String(boatId)]?.coords;
-    if (coords) mapRef.current?.centerOn(coords, sheetHeight(targetSnap));
+    if (coords) mapRef.current?.centerOn(coords, sheetHeight(targetSnap) + safeAreaBottom());
   }, [sheetSnap, onSheetSnapChange, onCloseControls, displayData]);
 
   const closeCard = useCallback(() => {
@@ -264,7 +271,7 @@ export const LivePage = ({
   return (
     <div
       className="map-view live-view"
-      style={{ "--sheet-height": `${isPhone ? sheetHeight(sheetSnap) : 0}px` } as React.CSSProperties}
+      style={{ "--sheet-height": `${sheetPx}px` } as React.CSSProperties}
     >
       {hasStaleData && lastUpdated && (
         <div className="stale-data-alert">
@@ -320,7 +327,7 @@ export const LivePage = ({
           controlsOpen={controlsOpen}
         />
         {isPhone ? (
-          <BottomSheet snap={sheetSnap} onSnapChange={handleSheetSnap}>
+          <BottomSheet snap={sheetSnap} onSnapChange={onSheetSnapChange}>
             {cardBoatId != null && crews.some((c) => c.id === cardBoatId) ? (
               <BoatCard
                 crew={crews.find((c) => c.id === cardBoatId)!}
@@ -365,11 +372,12 @@ export const LivePage = ({
       {lastUpdated && !error && !isHistoryMode && <div className="live-dot" />}
       <ReplayBadge />
 
-      {!isPhone && followedBoatId != null && (() => {
+      {/* Phones: the card's button shows following while it's open; otherwise this pill does */}
+      {followedBoatId != null && !(isPhone && cardBoatId === followedBoatId) && (() => {
         const crew = crews.find((c) => c.id === followedBoatId);
         return (
           <div
-            className={`follow-indicator ${panelCollapsed ? "" : "follow-indicator--beside-panel"}`}
+            className={`follow-indicator ${!isPhone && !panelCollapsed ? "follow-indicator--beside-panel" : ""}`}
             onClick={handleStopFollow}
           >
             <span className="follow-indicator__dot" />
