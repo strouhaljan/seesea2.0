@@ -49,6 +49,8 @@ app.listen(PORT, () => {
   setInterval(tryWarmCache, 10 * 60 * 1000);
 });
 
+const WARM_MAX_HOURS = 24;
+
 async function tryWarmCache() {
   if (EVENT_SLUGS.length === 0) {
     console.log("No EVENTS set, skipping cache warming");
@@ -59,19 +61,22 @@ async function tryWarmCache() {
     try {
       const { eventId, legs } = await getEventConfig(slug);
 
+      // Upstream's `active` flag is 0 on most events' race legs, so go by time only;
+      // if legs overlap (e.g. a weeks-long preparation leg) take the latest start
       const now = clock.now();
       const activeLeg = legs
-        .filter((l) => l.active === 1)
-        .find((l) => new Date(l.start).getTime() <= now && new Date(l.end).getTime() >= now);
+        .filter((l) => new Date(l.start).getTime() <= now && new Date(l.end).getTime() >= now)
+        .sort((a, b) => Date.parse(b.start) - Date.parse(a.start))[0];
 
       if (!activeLeg) {
         console.log(`No running leg for ${slug}, skipping cache warming`);
         continue;
       }
 
-      const legStart = Math.floor(new Date(activeLeg.start).getTime() / 1000);
-      console.log(`Warming cache for ${slug} (event ${eventId}) from leg start ${activeLeg.start}`);
-      await warmCache(String(eventId), legStart);
+      // At most the last day: a preparation leg can span weeks of mostly empty hours
+      const from = Math.max(Math.floor(Date.parse(activeLeg.start) / 1000), Math.floor(now / 1000) - WARM_MAX_HOURS * 3600);
+      console.log(`Warming cache for ${slug} (event ${eventId}, leg ${activeLeg.name}) from ${new Date(from * 1000).toISOString()}`);
+      await warmCache(String(eventId), from);
     } catch (err) {
       console.error(`Cache warming failed for ${slug}:`, err);
     }

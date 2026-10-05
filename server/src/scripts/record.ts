@@ -21,6 +21,7 @@ import { floorHour, sleep } from "../time.js";
 
 const BATCH_SIZE = 4;
 const WIND_LOOKAHEAD_S = 4 * 3600;
+const MAX_DEFAULT_LEG_DAYS = 4;
 
 const toSeconds = (iso: string) => Math.floor(Date.parse(iso) / 1000);
 const utcDate = (unixSeconds: number) => new Date(unixSeconds * 1000).toISOString().slice(0, 10);
@@ -46,9 +47,13 @@ async function main() {
   const event = await http.getEvent(slug);
   const eventId = String(event.cc_event_id);
   const allLegs = event.cc_event_leg ?? [];
-  const legs = legIds
-    ? allLegs.filter((l) => legIds.includes(l.id))
-    : allLegs.filter((l) => l.active === 1);
+  // Default: every leg, except weeks-long "preparation" legs (upstream's `active`
+  // flag is 0 on most race legs, so it can't be used to choose)
+  const isLong = (l: (typeof allLegs)[number]) => toSeconds(l.end) - toSeconds(l.start) > MAX_DEFAULT_LEG_DAYS * 86400;
+  const legs = legIds ? allLegs.filter((l) => legIds.includes(l.id)) : allLegs.filter((l) => !isLong(l));
+  if (!legIds) {
+    for (const l of allLegs.filter(isLong)) console.log(`Skipping leg ${l.id} (${l.name}): longer than ${MAX_DEFAULT_LEG_DAYS} days; pass --legs to include it`);
+  }
   if (legs.length === 0) {
     console.error(`No matching legs. Available: ${allLegs.map((l) => `${l.id} (${l.name})`).join(", ")}`);
     process.exit(1);

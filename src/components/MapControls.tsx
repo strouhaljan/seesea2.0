@@ -1,6 +1,7 @@
 import { ColorMode } from "../types/map";
 import { MapTheme } from "../utils/mapConfig";
 import { WindModel } from "../utils/windGrid";
+import { legsByStart } from "../utils/legs";
 import { EventLeg } from "../hooks/useEventConfig";
 
 const FUTURE_STEPS = [30, 60, 90, 120, 150, 180];
@@ -62,7 +63,7 @@ export const MapControls = ({
             <option value="auto">
               Auto{activeLegId ? ` (${legs.find((l) => l.id === activeLegId)?.name ?? ""})` : ""}
             </option>
-            {legs.filter((l) => l.active === 1).map((leg) => (
+            {legsByStart(legs).map((leg) => (
               <option key={leg.id} value={leg.id}>{leg.name}</option>
             ))}
           </select>
