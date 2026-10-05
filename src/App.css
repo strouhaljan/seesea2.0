@@ -916,3 +916,99 @@ main {
     bottom: var(--sheet-height, 0px);
   }
 }
+
+/* ---- Phone boat card ---- */
+.boat-detail {
+  padding: 4px 14px 12px;
+  border-top: 3px solid transparent;
+  overflow-y: auto;
+}
+
+.boat-detail__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+
+.boat-detail__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boat-detail__close {
+  background: none;
+  border: none;
+  color: var(--panel-text-muted);
+  padding: 4px;
+  cursor: pointer;
+}
+
+.boat-detail__desc {
+  color: var(--panel-text-muted);
+  font-size: 12px;
+  margin: 2px 0 10px;
+}
+
+.boat-detail__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 8px;
+}
+
+.boat-detail__stat b {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.boat-detail__stat span {
+  color: var(--panel-text-muted);
+  font-size: 11px;
+}
+
+.boat-detail__fix {
+  color: var(--panel-text-muted);
+  font-size: 11px;
+  margin: 10px 0;
+}
+
+.boat-detail__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.boat-detail__actions button {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  color: var(--panel-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boat-detail__follow {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #fff !important;
+}
+
+.boat-detail__follow--on {
+  background: #166534 !important;
+  border-color: #166534 !important;
+}
+
+.boat-detail__star--active {
+  color: #facc15 !important;
+}
+
+/* Desktop: keep the Following pill clear of the open side panel */
+.follow-indicator--beside-panel {
+  left: 262px;
+}

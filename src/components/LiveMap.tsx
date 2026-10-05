@@ -24,8 +24,8 @@ export type { ColorMode } from "../types/map";
 
 export interface LiveMapHandle {
   flyTo: (coords: [number, number]) => void;
-  /** Pan to the boat without changing zoom. */
-  centerOn: (coords: [number, number]) => void;
+  /** Pan to the boat without changing zoom; `bottomPadding` is the padding the map is heading to. */
+  centerOn: (coords: [number, number], bottomPadding?: number) => void;
   /** Keep centring/following clear of the phone sheet. */
   setBottomPadding: (px: number) => void;
 }
@@ -67,11 +67,20 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     flyTo: (coords: [number, number]) => {
       map.current?.flyTo({ center: coords, zoom: 17, speed: 2 });
     },
-    centerOn: (coords: [number, number]) => {
-      map.current?.easeTo({ center: coords, duration: 600 });
+    centerOn: (coords: [number, number], bottomPadding?: number) => {
+      // Animate padding together with the pan: a separate setPadding would cancel the animation
+      const padding = bottomPadding == null ? undefined : { top: 0, left: 0, right: 0, bottom: bottomPadding };
+      map.current?.easeTo({ center: coords, duration: 600, padding });
     },
     setBottomPadding: (px: number) => {
-      map.current?.setPadding({ top: 0, left: 0, right: 0, bottom: px });
+      const m = map.current;
+      if (!m) return;
+      const apply = () => {
+        if (m.getPadding().bottom !== px) m.setPadding({ top: 0, left: 0, right: 0, bottom: px });
+      };
+      // setPadding mid-animation cancels it (e.g. centring on a tapped boat), so apply once it ends
+      if (m.isEasing()) m.once("moveend", apply);
+      else apply();
     },
   }));
 

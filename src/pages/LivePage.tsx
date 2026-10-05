@@ -13,6 +13,7 @@ import { pickCurrentLeg } from "../utils/legs";
 import ReplayBadge from "../components/ReplayBadge";
 import { useFleetStats } from "../hooks/useFleetStats";
 import BoatList from "../components/BoatList";
+import BoatCard from "../components/BoatCard";
 import BottomSheet from "../components/BottomSheet";
 import { SheetSnap, sheetHeight } from "../utils/sheet";
 
@@ -47,7 +48,7 @@ export const LivePage = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const { eventId, crews, legs, slug } = useEventConfig();
+  const { eventId, crews, legs, slug, highlightedCrews, toggleHighlight } = useEventConfig();
   const legKey = `selectedLegId:${slug}`;
   const mapRef = useRef<LiveMapHandle>(null);
 
@@ -102,9 +103,11 @@ export const LivePage = ({
   const [activeBoatId, setActiveBoatId] = useState<number | null>(null);
   const [followedBoatId, setFollowedBoatId] = useState<number | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [cardBoatId, setCardBoatId] = useState<number | null>(null);
 
   // Phones: the sheet, controls and history never cover each other
   const handleSheetSnap = useCallback((snap: SheetSnap) => {
+    if (snap === "bar") setCardBoatId(null);
     onSheetSnapChange(snap);
     if (snap !== "bar") {
       onCloseControls();
@@ -146,15 +149,40 @@ export const LivePage = ({
   const displayData = isHistoryMode && Object.keys(historyData).length > 0 ? historyData : liveData;
   const stats = useFleetStats(crews, displayData, legMarkers);
 
-  const handleBoatClick = useCallback((boatId: number) => {
+  // Phones: tapping a boat (map or list) opens its card and centres it, without following
+  const openCard = useCallback((boatId: number) => {
+    setActiveBoatId(boatId);
+    setCardBoatId(boatId);
+    const targetSnap = sheetSnap === "bar" ? "half" : sheetSnap;
+    if (targetSnap !== sheetSnap) onSheetSnapChange(targetSnap);
+    onCloseControls();
+    setHistoryOpen(false);
+    const coords = displayData[String(boatId)]?.coords;
+    if (coords) mapRef.current?.centerOn(coords, sheetHeight(targetSnap));
+  }, [sheetSnap, onSheetSnapChange, onCloseControls, displayData]);
+
+  const closeCard = useCallback(() => {
+    setCardBoatId(null);
+    setActiveBoatId(null);
+  }, []);
+
+  const latestBoatClick = useRef<(boatId: number) => void>(() => {});
+  latestBoatClick.current = (boatId: number) => {
+    if (isPhone) {
+      openCard(boatId);
+      return;
+    }
     setActiveBoatId(boatId);
     setFollowedBoatId(boatId);
-    if (panelCollapsed && !isPhone) onTogglePanel();
-  }, [panelCollapsed, onTogglePanel, isPhone]);
+    if (panelCollapsed) onTogglePanel();
+  };
+  // Stable identity: markers keep the click handler they were created with
+  const handleBoatClick = useCallback((boatId: number) => latestBoatClick.current(boatId), []);
 
   const handleClearActive = useCallback(() => {
     setActiveBoatId(null);
     setFollowedBoatId(null);
+    setCardBoatId(null);
     if (isPhoneRef.current) closeControlsRef.current();
   }, []);
 
@@ -293,17 +321,29 @@ export const LivePage = ({
         />
         {isPhone ? (
           <BottomSheet snap={sheetSnap} onSnapChange={handleSheetSnap}>
-            <BoatList
-              crews={crews}
-              vesselsData={displayData}
-              stats={stats}
-              activeBoatId={activeBoatId}
-              followedBoatId={followedBoatId}
-              onSelect={(id) => {
-                setActiveBoatId(id);
-                handleFocusBoat(id);
-              }}
-            />
+            {cardBoatId != null && crews.some((c) => c.id === cardBoatId) ? (
+              <BoatCard
+                crew={crews.find((c) => c.id === cardBoatId)!}
+                data={displayData[String(cardBoatId)]}
+                dtf={stats.dtf.get(cardBoatId)}
+                position={stats.position.get(cardBoatId)}
+                following={followedBoatId === cardBoatId}
+                highlighted={highlightedCrews.has(cardBoatId)}
+                isHistoryMode={isHistoryMode}
+                onToggleFollow={() => setFollowedBoatId((f) => (f === cardBoatId ? null : cardBoatId))}
+                onToggleHighlight={() => toggleHighlight(cardBoatId)}
+                onClose={closeCard}
+              />
+            ) : (
+              <BoatList
+                crews={crews}
+                vesselsData={displayData}
+                stats={stats}
+                activeBoatId={activeBoatId}
+                followedBoatId={followedBoatId}
+                onSelect={openCard}
+              />
+            )}
           </BottomSheet>
         ) : (
           <BoatPanel
@@ -325,10 +365,13 @@ export const LivePage = ({
       {lastUpdated && !error && !isHistoryMode && <div className="live-dot" />}
       <ReplayBadge />
 
-      {followedBoatId != null && (() => {
+      {!isPhone && followedBoatId != null && (() => {
         const crew = crews.find((c) => c.id === followedBoatId);
         return (
-          <div className="follow-indicator" onClick={handleStopFollow}>
+          <div
+            className={`follow-indicator ${panelCollapsed ? "" : "follow-indicator--beside-panel"}`}
+            onClick={handleStopFollow}
+          >
             <span className="follow-indicator__dot" />
             Following {crew?.name ?? `#${followedBoatId}`} — tap to stop
           </div>
