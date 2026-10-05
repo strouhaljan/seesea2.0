@@ -10,6 +10,31 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0f172a" />
   <title>SeeSea 2.0</title>
+  <script>
+    // Start the startup API requests while the app bundle downloads (see src/utils/boot.ts)
+    (function () {
+      var json = function (url) {
+        return fetch(url).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        });
+      };
+      var done = function (data) { return { data: data, at: performance.now() }; };
+      var timeout = window.AbortSignal && AbortSignal.timeout ? { signal: AbortSignal.timeout(2000) } : undefined;
+      var match = location.pathname.match(/^\/e\/([^/]+)\/?$/);
+      var boot = {
+        clock: fetch("/api/clock", timeout)
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(done, function () { return done(null); }),
+        events: json("/api/events"),
+        event: match ? { slug: match[1], data: json("/api/event/" + match[1]) } : null,
+      };
+      // Failures are handled by whoever takes the promise; don't report them twice
+      boot.events.catch(function () {});
+      if (boot.event) boot.event.data.catch(function () {});
+      window.__boot = boot;
+    })();
+  </script>
 </head>
 
 <body>

@@ -6,6 +6,8 @@
  * backoff and "x seconds ago" text.
  */
 
+import { takeBootClock } from "./boot";
+
 interface ClockResponse {
   now: number;
   speed: number;
@@ -34,10 +36,10 @@ async function fetchClock(): Promise<ClockResponse | null> {
   }
 }
 
-function apply(data: ClockResponse & { replay: string }) {
+function apply(data: ClockResponse & { replay: string }, syncedAt = performance.now()) {
   sync = {
     serverNow: data.now,
-    syncedAt: performance.now(),
+    syncedAt,
     speed: data.speed,
     end: data.end ?? Infinity,
   };
@@ -47,8 +49,11 @@ function apply(data: ClockResponse & { replay: string }) {
 }
 
 export async function initClock(): Promise<void> {
-  const data = await fetchClock();
-  if (data?.replay) apply({ ...data, replay: data.replay });
+  // Usually already requested by index.html while the bundle downloaded
+  const boot = takeBootClock();
+  const first = boot ? await boot : { data: await fetchClock(), at: performance.now() };
+  const data = first.data as ClockResponse | null;
+  if (data?.replay) apply({ ...data, replay: data.replay }, first.at);
 
   // While replaying, keep in step with the server (a restart resets its clock).
   // If the server wasn't reachable yet, keep trying. Otherwise one sync is enough.

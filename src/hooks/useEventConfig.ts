@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { takeBootEvent } from "../utils/boot";
 
 export interface Crew {
   id: number;
@@ -62,12 +63,15 @@ export function useEventConfigLoader(slug: string): EventConfigBase {
   });
 
   useEffect(() => {
-    fetch(`/api/event/${slug}`)
-      .then((res) => {
+    const load =
+      takeBootEvent(slug) ??
+      fetch(`/api/event/${slug}`).then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
-      })
-      .then((data) => {
+      });
+    load
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((data: any) => {
         setConfig({
           eventId: data.eventId,
           crews: data.crews,
