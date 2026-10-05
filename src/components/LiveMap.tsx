@@ -24,6 +24,10 @@ export type { ColorMode } from "../types/map";
 
 export interface LiveMapHandle {
   flyTo: (coords: [number, number]) => void;
+  /** Pan to the boat without changing zoom. */
+  centerOn: (coords: [number, number]) => void;
+  /** Keep centring/following clear of the phone sheet. */
+  setBottomPadding: (px: number) => void;
 }
 
 import { EventLeg } from "../hooks/useEventConfig";
@@ -62,6 +66,12 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
       map.current?.flyTo({ center: coords, zoom: 17, speed: 2 });
+    },
+    centerOn: (coords: [number, number]) => {
+      map.current?.easeTo({ center: coords, duration: 600 });
+    },
+    setBottomPadding: (px: number) => {
+      map.current?.setPadding({ top: 0, left: 0, right: 0, bottom: px });
     },
   }));
 

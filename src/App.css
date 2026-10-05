@@ -839,3 +839,80 @@ main {
   line-height: 1;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
+
+/* ---- Phone bottom sheet ---- */
+.bottom-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg-solid);
+  color: var(--panel-text);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.45);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transition: height 0.25s ease;
+  overflow: hidden;
+}
+
+.bottom-sheet--dragging {
+  transition: none;
+}
+
+.bottom-sheet__handle {
+  flex-shrink: 0;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+.bottom-sheet__grip {
+  width: 38px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--panel-text-muted);
+  opacity: 0.6;
+}
+
+.bottom-sheet__content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottom-sheet .boat-panel__list {
+  padding-right: 10px;
+}
+
+.bottom-sheet .boat-card {
+  width: auto;
+}
+
+@media (max-width: 767px) {
+  /* Everything that sat at the bottom of the map now sits above the sheet */
+  .controls-stack {
+    bottom: calc(var(--sheet-height, 0px) + 12px);
+  }
+
+  .live-dot {
+    bottom: calc(var(--sheet-height, 0px) + 12px);
+  }
+
+  .wind-legend {
+    bottom: var(--sheet-height, 0px);
+  }
+
+  /* Scoped so it outranks mapbox-gl.css, which loads after this file */
+  .map-view .mapboxgl-ctrl-bottom-left,
+  .map-view .mapboxgl-ctrl-bottom-right {
+    bottom: var(--sheet-height, 0px);
+  }
+}
