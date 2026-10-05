@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { eventPath, getEventSlugFromPath } from "../utils/route";
+import { takeBootEvents } from "../utils/boot";
 
 export interface EventSummary {
   slug: string;
@@ -16,11 +17,13 @@ export function useEvents() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/events")
-      .then((res) => {
+    const load =
+      (takeBootEvents() as Promise<EventSummary[]> | null) ??
+      fetch("/api/events").then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<EventSummary[]>;
-      })
+      });
+    load
       .then(setEvents)
       .catch((err: Error) => setError(err.message));
   }, []);
