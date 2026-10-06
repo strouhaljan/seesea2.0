@@ -94,5 +94,5 @@ export function useTailLayer(
         },
       });
     }
-  }, [mapLoaded, tails, trailMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted, colorMode]);
+  }, [map, mapLoaded, tails, trailMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted, colorMode]);
 }

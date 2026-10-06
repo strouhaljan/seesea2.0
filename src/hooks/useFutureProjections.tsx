@@ -113,7 +113,7 @@ export function useFutureProjections(
         },
       });
     }
-  }, [mapLoaded, vesselsData, futureMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted, colorMode]);
+  }, [map, mapLoaded, vesselsData, futureMinutes, isHistoryMode, crews, highlightedCrews, showOnlyHighlighted, colorMode]);
 
   // Cleanup on unmount
   useEffect(() => {

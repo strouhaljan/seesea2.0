@@ -132,7 +132,7 @@ export function useVesselMarkers(
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [mapLoaded]);
+  }, [map, mapLoaded, simTimeRef]);
 
   // Update markers based on live data
   useEffect(() => {
@@ -250,12 +250,13 @@ export function useVesselMarkers(
         map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 });
       }
     }
-  }, [mapLoaded, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, followedBoatId]);
+  }, [map, mapLoaded, onBoatClick, vesselsData, crews, highlightedCrews, showOnlyHighlighted, colorMode, activeBoatId, followedBoatId]);
 
   // Cleanup on unmount
   useEffect(() => {
+    const roots = rootsRef.current;
     return () => {
-      Object.values(rootsRef.current).forEach((root) => {
+      Object.values(roots).forEach((root) => {
         try { root.unmount(); } catch (e) { console.error("Error unmounting React root:", e); }
       });
     };

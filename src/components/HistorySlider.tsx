@@ -19,7 +19,7 @@ interface HistorySliderProps {
 }
 
 /** Playback speeds the speed button cycles through. */
-const SPEEDS = [1, 5, 20, 50, 100];
+const SPEEDS = [1, 10, 100, 500];
 
 /** Hook that fires a callback on press, then repeatedly every 250ms while held */
 function useRepeatAction(action: () => void) {
@@ -156,7 +156,7 @@ const HistorySlider = ({
 
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [isPlaying, onTimeChange, stopPlayback]);
+  }, [isPlaying, onTimeChange, stopPlayback, simTimeRef]);
 
   const togglePlayback = useCallback(() => {
     if (isPlaying) {

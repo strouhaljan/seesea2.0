@@ -61,7 +61,7 @@ export function useWindOverlay(
       clearInterval(refreshInterval);
       windOverlayRef.current?.hide();
     };
-  }, [mapLoaded, showWind, windModel, blendBoats, vesselsData, isHistoryMode, futureMinutes]);
+  }, [map, mapLoaded, showWind, windModel, blendBoats, vesselsData, isHistoryMode, futureMinutes]);
 
   // Cleanup on unmount
   useEffect(() => {
