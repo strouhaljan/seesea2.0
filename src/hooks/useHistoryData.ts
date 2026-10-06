@@ -19,9 +19,10 @@ interface CachedChunk {
 const FIX_LOOKBACK_S = 600;
 /**
  * Timelines run this far past the selected time. Playback moves markers every frame but updates
- * the selected time only every 200 ms (20 s of race time at 100×), so they need the fixes ahead.
+ * the selected time only every 200 ms (100 s of race time at 500×), so they need the fixes ahead,
+ * with room for slow renders on phones.
  */
-const TIMELINE_LOOKAHEAD_S = 120;
+const TIMELINE_LOOKAHEAD_S = 300;
 
 /** Sorted points per vessel from the last fix up to the lookahead — used for interpolation */
 export type HistoryTimelines = Record<string, VesselDataPoint[]>;
