@@ -42,8 +42,9 @@ function App() {
   const toggleControls = useCallback(() => {
     const open = !controlsOpen;
     setControlsOpen(open);
-    if (open && isPhone) setSheetSnap("bar");
-  }, [controlsOpen, isPhone, setControlsOpen, setSheetSnap]);
+    // Phones show settings in the boat sheet: raise it if it's only a bar
+    if (open && isPhone && sheetSnap === "bar") setSheetSnap("half");
+  }, [controlsOpen, isPhone, sheetSnap, setControlsOpen, setSheetSnap]);
 
   // ⛵ on phones raises/lowers the boat sheet; on desktop it toggles the side panel
   const toggleBoats = useCallback(() => {
