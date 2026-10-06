@@ -24,6 +24,12 @@ const FIX_LOOKBACK_S = 600;
  */
 const TIMELINE_LOOKAHEAD_S = 300;
 
+/**
+ * Hours fetched ahead of the selected time. An hour plays in ~7 s at 500×, and an hour SeeSea
+ * hasn't sent the server yet can take 20 s or more to arrive.
+ */
+const PREFETCH_HOURS = 3;
+
 /** Sorted points per vessel from the last fix up to the lookahead — used for interpolation */
 export type HistoryTimelines = Record<string, VesselDataPoint[]>;
 
@@ -122,6 +128,15 @@ class ChunkCache {
 
 // Singleton — survives re-renders and hook re-mounts
 const chunkCache = new ChunkCache();
+
+/** Start fetching the hours after `lastHour`, skipping any that haven't started yet. */
+function prefetchAhead(eventId: number, lastHour: number) {
+  for (let i = 1; i <= PREFETCH_HOURS; i++) {
+    const hour = lastHour + i * 3600;
+    if (hour > nowSeconds()) break;
+    chunkCache.prefetch(eventId, hour);
+  }
+}
 
 /**
  * Fetches vessel positions for a specific point in time.
@@ -253,16 +268,18 @@ export function useHistoryData(
       setHistoryTails(tails);
       setHistoryTimelines(timelines);
       setLoading(false);
-      chunkCache.prefetch(eventId, lastHour + 3600);
+      prefetchAhead(eventId, lastHour);
       return;
     }
 
     // Slow path: fetch missing chunks, then slice
     setLoading(true);
 
-    Promise.all(
-      hours.map((h) => chunkCache.getChunk(eventId, h)),
-    ).then((chunks) => {
+    const needed = Promise.all(hours.map((h) => chunkCache.getChunk(eventId, h)));
+    // Read ahead now rather than once these arrive, so pressing play straight away doesn't stall
+    prefetchAhead(eventId, lastHour);
+
+    needed.then((chunks) => {
       if (requestId !== latestRequestRef.current) return;
 
       const { positions, tails, timelines } = sliceData(selectedTime, trailMinutes, chunks);
@@ -270,8 +287,6 @@ export function useHistoryData(
       setHistoryTails(tails);
       setHistoryTimelines(timelines);
       setLoading(false);
-
-      chunkCache.prefetch(eventId, lastHour + 3600);
     }).catch((err) => {
       console.error("Failed to load history chunks:", err);
       setLoading(false);

@@ -116,9 +116,9 @@ const HistorySlider = ({
   const fwd1 = useRepeatAction(useCallback(() => { stopPlayback(); step(60); }, [step, stopPlayback]));
   const fwd5 = useRepeatAction(useCallback(() => { stopPlayback(); step(300); }, [step, stopPlayback]));
 
-  // RAF-based playback — tracks wall-clock time for smooth advancement
+  // RAF-based playback — advances by each frame's wall-clock time at the current speed,
+  // so changing speed mid-play carries on from where playback is
   const rafRef = useRef(0);
-  const playStartWallRef = useRef(0);
   const playStartTimeRef = useRef(0);
   const lastEmitRef = useRef(0);
   const endTimeRef = useRef(endTime);
@@ -127,12 +127,14 @@ const HistorySlider = ({
   useEffect(() => {
     if (!isPlaying) return;
 
-    playStartWallRef.current = performance.now();
+    let simTime = playStartTimeRef.current;
+    let lastFrame = performance.now();
     lastEmitRef.current = 0;
 
     const tick = () => {
-      const elapsed = (performance.now() - playStartWallRef.current) / 1000;
-      const simTime = playStartTimeRef.current + elapsed * playbackSpeedRef.current;
+      const frame = performance.now();
+      simTime += ((frame - lastFrame) / 1000) * playbackSpeedRef.current;
+      lastFrame = frame;
 
       if (simTime > endTimeRef.current) {
         if (simTimeRef) simTimeRef.current = null;
@@ -145,9 +147,8 @@ const HistorySlider = ({
       if (simTimeRef) simTimeRef.current = simTime;
 
       // Throttle React state updates to every 200ms wall-clock
-      const now = performance.now();
-      if (now - lastEmitRef.current >= 200) {
-        lastEmitRef.current = now;
+      if (frame - lastEmitRef.current >= 200) {
+        lastEmitRef.current = frame;
         onTimeChange(Math.round(simTime));
       }
 
