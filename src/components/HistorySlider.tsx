@@ -156,7 +156,7 @@ const HistorySlider = ({
 
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [isPlaying, onTimeChange, stopPlayback]);
+  }, [isPlaying, onTimeChange, stopPlayback, simTimeRef]);
 
   const togglePlayback = useCallback(() => {
     if (isPlaying) {

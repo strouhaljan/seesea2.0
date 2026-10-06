@@ -104,5 +104,5 @@ export function useLegLayer(
         },
       });
     }
-  }, [mapLoaded, legMarkers]);
+  }, [map, mapLoaded, legMarkers]);
 }

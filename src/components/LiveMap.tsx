@@ -64,6 +64,11 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const { crews, highlightedCrews, center } = useEventConfig();
+  // The map is created once: it opens at the event's centre (EventScope remounts per event)
+  // and its click handler reads the latest callback
+  const initialCenter = useRef(center);
+  const onClearActiveRef = useRef(onClearActive);
+  onClearActiveRef.current = onClearActive;
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
@@ -86,11 +91,6 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     },
   }));
 
-  // Set initial data-theme attribute
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", controls.mapTheme);
-  }, []);
-
   // Switch map style when theme changes
   useEffect(() => {
     if (!map.current) return;
@@ -106,7 +106,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: MAP_STYLES[getSavedTheme()],
-      center: center ?? DEFAULT_CENTER,
+      center: initialCenter.current ?? DEFAULT_CENTER,
       zoom: getSavedZoom(),
       dragRotate: false,
       pitchWithRotate: false,
@@ -116,7 +116,7 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     map.current.touchZoomRotate.disableRotation();
     map.current.on("load", () => setMapLoaded(true));
     map.current.on("zoomend", () => { if (map.current) saveZoom(map.current.getZoom()); });
-    map.current.on("click", () => onClearActive());
+    map.current.on("click", () => onClearActiveRef.current());
 
     return () => { map.current?.remove(); };
   }, []);

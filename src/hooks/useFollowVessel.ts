@@ -24,7 +24,7 @@ export function useFollowVessel(
         });
       }
     }
-  }, [followedBoatId]);
+  }, [followedBoatId, map, vesselsSnapshotRef]);
 
   // Re-center on followed vessel during animation
   useEffect(() => {
@@ -52,5 +52,5 @@ export function useFollowVessel(
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [mapLoaded]);
+  }, [mapLoaded, map, vesselsSnapshotRef]);
 }
