@@ -1,5 +1,5 @@
 import { MutableRefObject, useCallback, useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Play, Pause } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ChevronsLeft, ChevronsRight, Play, Pause } from "lucide-react";
 import { formatDate } from "../utils/dateUtils";
 import "./HistorySlider.css";
 
@@ -17,6 +17,9 @@ interface HistorySliderProps {
   expanded: boolean;
   onExpandedChange: (open: boolean) => void;
 }
+
+/** Playback speeds the speed button cycles through. */
+const SPEEDS = [1, 5, 20, 50, 100];
 
 /** Hook that fires a callback on press, then repeatedly every 250ms while held */
 function useRepeatAction(action: () => void) {
@@ -168,12 +171,8 @@ const HistorySlider = ({
     }
   }, [isPlaying, isLive, startTime, currentTime, onTimeChange, stopPlayback]);
 
-  const speeds = [1, 5, 20] as const;
   const cycleSpeed = useCallback(() => {
-    setPlaybackSpeed((prev) => {
-      const idx = speeds.indexOf(prev as typeof speeds[number]);
-      return speeds[(idx + 1) % speeds.length];
-    });
+    setPlaybackSpeed((prev) => SPEEDS[(SPEEDS.indexOf(prev) + 1) % SPEEDS.length]);
   }, []);
 
   // Swipe up on panel to collapse
@@ -212,24 +211,24 @@ const HistorySlider = ({
           </div>
           <div className="history-slider__controls">
             <div className="history-slider__buttons">
-              <button className="history-slider__step-btn" {...back5}>«</button>
-              <button className="history-slider__step-btn" {...back1}>‹</button>
+              <button className="history-slider__step-btn" title="Back 5 minutes" {...back5}><ChevronsLeft size={18} /></button>
+              <button className="history-slider__step-btn" title="Back 1 minute" {...back1}><ChevronLeft size={18} /></button>
               <button
                 className={`history-slider__step-btn ${isPlaying ? "history-slider__step-btn--active" : ""}`}
                 onClick={togglePlayback}
                 title={isPlaying ? "Pause" : "Play"}
               >
-                {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                {isPlaying ? <Pause size={18} /> : <Play size={18} />}
               </button>
               <button
-                className="history-slider__step-btn history-slider__step-btn--speed"
+                className="history-slider__step-btn"
                 onClick={cycleSpeed}
                 title="Playback speed"
               >
                 {playbackSpeed}×
               </button>
-              <button className="history-slider__step-btn" {...fwd1}>›</button>
-              <button className="history-slider__step-btn" {...fwd5}>»</button>
+              <button className="history-slider__step-btn" title="Forward 1 minute" {...fwd1}><ChevronRight size={18} /></button>
+              <button className="history-slider__step-btn" title="Forward 5 minutes" {...fwd5}><ChevronsRight size={18} /></button>
             </div>
             <input
               ref={sliderRef}
