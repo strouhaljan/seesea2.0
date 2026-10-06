@@ -15,7 +15,15 @@ interface CachedChunk {
   expiresAt: number;
 }
 
-/** Sorted points per vessel covering the trail window — used for interpolation */
+/** Look this far back for each boat's last fix, so the start of an hour still has positions. */
+const FIX_LOOKBACK_S = 600;
+/**
+ * Timelines run this far past the selected time. Playback moves markers every frame but updates
+ * the selected time only every 200 ms (20 s of race time at 100×), so they need the fixes ahead.
+ */
+const TIMELINE_LOOKAHEAD_S = 120;
+
+/** Sorted points per vessel from the last fix up to the lookahead — used for interpolation */
 export type HistoryTimelines = Record<string, VesselDataPoint[]>;
 
 interface UseHistoryDataResult {
@@ -163,23 +171,17 @@ export function useHistoryData(
             }
           }
 
-          // Build tail points and timeline within the window
-          // Timeline includes one point after `time` for forward interpolation
+          // Tail: points within the trail window
           const tailPoints: TailPoint[] = [];
+          for (let i = 0; i <= bestIdx; i++) {
+            const p = points[i];
+            if (p.time >= windowStart) tailPoints.push([p.time, p.coords[0], p.coords[1], p.tws]);
+          }
+
+          // Timeline: the last fix at or before `time`, then the fixes up to the lookahead
           const timelinePoints: VesselDataPoint[] = [];
-          let addedNext = false;
-          for (const p of points) {
-            if (p.time < windowStart) continue;
-            if (p.time <= time) {
-              tailPoints.push([p.time, p.coords[0], p.coords[1], p.tws]);
-              timelinePoints.push(p);
-            } else if (!addedNext) {
-              // Include the first point after target time for interpolation
-              timelinePoints.push(p);
-              addedNext = true;
-            } else {
-              break;
-            }
+          for (let i = Math.max(bestIdx, 0); i < points.length && points[i].time <= time + TIMELINE_LOOKAHEAD_S; i++) {
+            timelinePoints.push(points[i]);
           }
           if (tailPoints.length > 0) {
             if (!tails[vesselId]) {
@@ -221,10 +223,8 @@ export function useHistoryData(
 
     const requestId = ++latestRequestRef.current;
 
-
-    const trailSeconds = trailMinutes * 60;
-    const windowStart = selectedTime - trailSeconds;
-    const windowEnd = selectedTime + 30; // small lookahead
+    const windowStart = selectedTime - Math.max(trailMinutes * 60, FIX_LOOKBACK_S);
+    const windowEnd = selectedTime + TIMELINE_LOOKAHEAD_S;
 
     const firstHour = floorHour(windowStart);
     const lastHour = floorHour(windowEnd);
