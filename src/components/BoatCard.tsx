@@ -30,8 +30,15 @@ function ordinal(n: number): string {
 function fixLabel(time: number | undefined, isHistoryMode: boolean): string {
   if (time == null) return DASH;
   if (isHistoryMode) return new Date(time * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const minutes = Math.max(0, Math.round((raceNow() / 1000 - time) / 60));
-  return minutes < 1 ? "now" : `${minutes} min ago`;
+  const minutes = Math.max(0, Math.floor((raceNow() / 1000 - time) / 60));
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes} min ago`;
+  if (minutes < 24 * 60) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m === 0 ? `${h} h ago` : `${h} h ${m} min ago`;
+  }
+  return `${Math.floor(minutes / (24 * 60))} d ago`;
 }
 
 /** Compact details for one boat, shown in the phone sheet. */
