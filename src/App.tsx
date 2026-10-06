@@ -21,15 +21,13 @@ function App() {
   }, []);
   const isPhone = useIsPhone();
   // Phones start with the map clear; desktop keeps the controls open by default
-  const [controlsOpen, setControlsOpenState] = useState(() => {
+  const [controlsOpen, setControlsOpen] = useState(() => {
     const saved = localStorage.getItem("controlsOpen");
     return saved === null ? !isPhoneNow() : saved !== "false";
   });
-  const setControlsOpen = useCallback((open: boolean) => {
-    localStorage.setItem("controlsOpen", String(open));
-    setControlsOpenState(open);
-  }, []);
-  const closeControls = useCallback(() => setControlsOpen(false), [setControlsOpen]);
+  // Automatic closes (map tap, opening a card, raising the sheet, history) aren't saved,
+  // so phone use doesn't change the desktop default; only ⚙ is remembered.
+  const closeControls = useCallback(() => setControlsOpen(false), []);
 
   const [sheetSnap, setSheetSnapState] = useState<SheetSnap>(
     () => (localStorage.getItem("boatSheetSnap") as SheetSnap) || "bar",
@@ -41,18 +39,19 @@ function App() {
 
   const toggleControls = useCallback(() => {
     const open = !controlsOpen;
+    localStorage.setItem("controlsOpen", String(open));
     setControlsOpen(open);
     // Phones show settings in the boat sheet: raise it if it's only a bar
     if (open && isPhone && sheetSnap === "bar") setSheetSnap("half");
-  }, [controlsOpen, isPhone, sheetSnap, setControlsOpen, setSheetSnap]);
+  }, [controlsOpen, isPhone, sheetSnap, setSheetSnap]);
 
   // ⛵ on phones raises/lowers the boat sheet; on desktop it toggles the side panel
   const toggleBoats = useCallback(() => {
     if (!isPhone) return togglePanel();
     const raise = sheetSnap === "bar";
     setSheetSnap(raise ? "half" : "bar");
-    if (raise) setControlsOpen(false);
-  }, [isPhone, sheetSnap, setSheetSnap, setControlsOpen, togglePanel]);
+    if (raise) closeControls();
+  }, [isPhone, sheetSnap, setSheetSnap, closeControls, togglePanel]);
 
   return (
     <div className="app-container">
