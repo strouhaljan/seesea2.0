@@ -1,5 +1,6 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useMemo, useRef, useState } from "react";
 import { SHEET_SNAPS as ORDER, SheetSnap, safeAreaBottom, sheetHeight } from "../utils/sheet";
+import { useViewportHeight } from "../hooks/useViewportHeight";
 
 const TAP_SLOP_PX = 6;
 /** Release speed (px/ms) that counts as a flick to the next height. */
@@ -15,19 +16,12 @@ interface BottomSheetProps {
 
 /** Draggable bottom sheet with three heights (phones). Tap the handle to toggle bar ↔ half. */
 export default function BottomSheet({ snap, onSnapChange, children }: BottomSheetProps) {
-  const [viewport, setViewport] = useState(() => window.innerHeight);
-  const [inset, setInset] = useState(safeAreaBottom);
+  const viewport = useViewportHeight();
+  // Re-read the inset on every viewport change (rotation changes it)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const inset = useMemo(() => safeAreaBottom(), [viewport]);
   const [dragHeight, setDragHeight] = useState<number | null>(null);
   const drag = useRef<{ startY: number; startH: number; lastY: number; lastT: number; v: number } | null>(null);
-
-  useEffect(() => {
-    const onResize = () => {
-      setViewport(window.innerHeight);
-      setInset(safeAreaBottom());
-    };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
 
   const heights = ORDER.map((s) => sheetHeight(s, viewport));
   const height = dragHeight ?? sheetHeight(snap, viewport);

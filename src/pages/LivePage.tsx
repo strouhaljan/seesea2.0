@@ -19,6 +19,7 @@ import { useMapControls } from "../hooks/useMapControls";
 import { X } from "lucide-react";
 import BottomSheet from "../components/BottomSheet";
 import { SheetSnap, safeAreaBottom, sheetHeight } from "../utils/sheet";
+import { useViewportHeight } from "../hooks/useViewportHeight";
 
 interface LiveData {
   // Support both array format and direct object format
@@ -135,8 +136,12 @@ export const LivePage = ({
     if (isPhone && controlsOpen) setHistoryOpen(false);
   }, [isPhone, controlsOpen]);
 
-  // Visible sheet height including the iPhone home-indicator inset
-  const sheetPx = useMemo(() => (isPhone ? sheetHeight(sheetSnap) + safeAreaBottom() : 0), [isPhone, sheetSnap]);
+  // Visible sheet height including the iPhone home-indicator inset; follows the URL bar and keyboard
+  const viewport = useViewportHeight();
+  const sheetPx = useMemo(
+    () => (isPhone ? sheetHeight(sheetSnap, viewport) + safeAreaBottom() : 0),
+    [isPhone, sheetSnap, viewport],
+  );
 
   // Keep centring and following above the sheet
   useEffect(() => {
