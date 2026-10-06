@@ -7,7 +7,7 @@ import { MAP_STYLES, DEFAULT_CENTER, getSavedZoom, saveZoom, getSavedTheme } fro
 import { TailsData } from "../hooks/useTails";
 import { HistoryTimelines } from "../hooks/useHistoryData";
 import { LegMarker } from "../hooks/useLegMarkers";
-import { useMapControls } from "../hooks/useMapControls";
+import type { MapControlsState } from "../hooks/useMapControls";
 import { useVesselMarkers } from "../hooks/useVesselMarkers";
 import { useFutureProjections } from "../hooks/useFutureProjections";
 import { useTailLayer } from "../hooks/useTailLayer";
@@ -46,7 +46,11 @@ interface LiveMapProps {
   isHistoryMode?: boolean;
   historyTimelines?: HistoryTimelines;
   simTimeRef?: MutableRefObject<number | null>;
+  /** Desktop settings panel open. */
   controlsOpen: boolean;
+  /** Phones show settings in the boat sheet, so the map renders no panel at all. */
+  hideControls: boolean;
+  controls: MapControlsState;
 }
 
 const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
@@ -54,14 +58,12 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
   legs, activeLegId,
   activeBoatId, followedBoatId,
   onBoatClick, onClearActive,
-  isHistoryMode = false, historyTimelines, simTimeRef, controlsOpen,
+  isHistoryMode = false, historyTimelines, simTimeRef, controlsOpen, hideControls, controls,
 }, ref) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const { crews, highlightedCrews, center } = useEventConfig();
-
-  const controls = useMapControls();
 
   useImperativeHandle(ref, () => ({
     flyTo: (coords: [number, number]) => {
@@ -160,31 +162,14 @@ const LiveMap = forwardRef<LiveMapHandle, LiveMapProps>(({
     <div className="map-wrapper">
       <div ref={mapContainer} className="map-container" />
       {controls.colorMode === "wind" && <WindSpeedLegend />}
-      <MapControls
+      {!hideControls && <MapControls
         controlsOpen={controlsOpen}
+        controls={controls}
         legs={legs}
-        selectedLegId={controls.selectedLegId}
-        setSelectedLegId={controls.setSelectedLegId}
         activeLegId={activeLegId}
-        colorMode={controls.colorMode}
-        setColorMode={controls.setColorMode}
-        showOnlyHighlighted={controls.showOnlyHighlighted}
-        setShowOnlyHighlighted={controls.setShowOnlyHighlighted}
-        futureMinutes={controls.futureMinutes}
-        setFutureMinutes={controls.setFutureMinutes}
-        trailMinutes={controls.trailMinutes}
-        setTrailMinutes={controls.setTrailMinutes}
         trackLengthMax={trackLengthMax}
-        showWind={controls.showWind}
-        setShowWind={controls.setShowWind}
-        windModel={controls.windModel}
-        setWindModel={controls.setWindModel}
-        blendBoats={controls.blendBoats}
-        setBlendBoats={controls.setBlendBoats}
-        mapTheme={controls.mapTheme}
-        setMapTheme={controls.setMapTheme}
         isHistoryMode={isHistoryMode}
-      />
+      />}
     </div>
   );
 });

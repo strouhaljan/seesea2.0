@@ -74,3 +74,5 @@ export function useMapControls() {
     mapTheme, setMapTheme,
   };
 }
+
+export type MapControlsState = ReturnType<typeof useMapControls>;

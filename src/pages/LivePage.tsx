@@ -14,6 +14,9 @@ import ReplayBadge from "../components/ReplayBadge";
 import { useFleetStats } from "../hooks/useFleetStats";
 import BoatList from "../components/BoatList";
 import BoatCard from "../components/BoatCard";
+import SettingsPanel from "../components/SettingsPanel";
+import { useMapControls } from "../hooks/useMapControls";
+import { X } from "lucide-react";
 import BottomSheet from "../components/BottomSheet";
 import { SheetSnap, safeAreaBottom, sheetHeight } from "../utils/sheet";
 
@@ -104,15 +107,18 @@ export const LivePage = ({
   const [followedBoatId, setFollowedBoatId] = useState<number | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [cardBoatId, setCardBoatId] = useState<number | null>(null);
+  // Map settings live here so the desktop panel (inside the map) and the phone sheet share them
+  const controls = useMapControls();
 
-  // Phones: the sheet, controls and history never cover each other. Every path that
-  // changes the sheet height (drag, ⛵, ⚙, history tab, opening a card) ends up here.
+  // Phones: the sheet (boats, a boat card or settings) and history never cover each other.
+  // Every path that changes the sheet height (drag, ⛵, ⚙, history tab, opening a card) ends up here.
   useEffect(() => {
     if (!isPhone) return;
     if (sheetSnap === "bar") {
-      setCardBoatId(null); // the bar shows the search row, not a card
-    } else {
+      // the bar shows the search row, not a card or settings
+      setCardBoatId(null);
       onCloseControls();
+    } else {
       setHistoryOpen(false);
     }
   }, [isPhone, sheetSnap, onCloseControls]);
@@ -325,10 +331,28 @@ export const LivePage = ({
           historyTimelines={historyTimelines}
           simTimeRef={simTimeRef}
           controlsOpen={controlsOpen}
+          hideControls={isPhone}
+          controls={controls}
         />
         {isPhone ? (
           <BottomSheet snap={sheetSnap} onSnapChange={onSheetSnapChange}>
-            {cardBoatId != null && crews.some((c) => c.id === cardBoatId) ? (
+            {controlsOpen ? (
+              <div className="sheet-settings">
+                <div className="sheet-settings__header">
+                  <strong>Settings</strong>
+                  <button className="boat-detail__close" onClick={onCloseControls} aria-label="Close settings">
+                    <X size={18} />
+                  </button>
+                </div>
+                <SettingsPanel
+                  controls={controls}
+                  legs={legs}
+                  activeLegId={autoLegId}
+                  trackLengthMax={trackLengthMax}
+                  isHistoryMode={isHistoryMode}
+                />
+              </div>
+            ) : cardBoatId != null && crews.some((c) => c.id === cardBoatId) ? (
               <BoatCard
                 crew={crews.find((c) => c.id === cardBoatId)!}
                 data={displayData[String(cardBoatId)]}
