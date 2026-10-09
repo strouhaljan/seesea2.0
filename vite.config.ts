@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "prompt",
+      registerType: "autoUpdate",
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,woff,woff2}"],
         navigateFallback: "/index.html",
